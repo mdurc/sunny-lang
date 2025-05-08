@@ -112,7 +112,7 @@ ASTNode* parse_function(Parser* p) {
 
     ASTNode* body = parse_block(p);
 
-    return create_func_decl(return_type, name_tok->data.lexeme_data, params, param_count, body);
+    return create_func_decl(return_type, name_tok->data.lexeme, params, param_count, body);
 }
 
 ASTNode* parse_param(Parser* p) {
@@ -125,7 +125,7 @@ ASTNode* parse_param(Parser* p) {
     consume(p, COLON, "Expected ':'");
     ASTNode* type = parse_type(p);
 
-    return create_param(type, name->data.lexeme_data);
+    return create_param(type, name->data.lexeme);
 }
 
 ASTNode* parse_block(Parser* p) {
@@ -204,7 +204,7 @@ ASTNode* parse_statement(Parser* p) {
         consume(p, RPAREN, "Expected ')' after for loop");
 
         ASTNode* body = parse_block(p);
-        return create_for(iter->data.lexeme_data, init, end, body);
+        return create_for(iter->data.lexeme, init, end, body);
     }
 
     // parse variable declaration (with possible initialization)
@@ -230,7 +230,7 @@ ASTNode* parse_var_decl(Parser* p) {
     }
 
     consume(p, SEMICOLON, "Expected ';' after variable declaration");
-    return create_var_decl(type, name->data.lexeme_data, init);
+    return create_var_decl(type, name->data.lexeme, init);
 }
 
 ASTNode* parse_expression(Parser* p) {
@@ -335,7 +335,7 @@ ASTNode* parse_primary(Parser* p) {
     Token* tok = current(p);
     switch(tok->type) {
         case IDENTIFIER: {
-            const char* name = tok->data.lexeme_data;
+            const char* name = tok->data.lexeme;
             advance(p);
 
             // check if function call on this identifier and handle

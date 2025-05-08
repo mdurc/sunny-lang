@@ -105,28 +105,11 @@ const char* tok_string(TokenType type) {
     }
 }
 
-const char* tok_cat_string(Category cat) {
-    switch (cat) {
-        case Keyword:       return "Keyword";
-        case Identifier:       return "Identifier";
-        case Primitive_type:       return "Primitive_type";
-        case Literal:       return "Literal";
-        case Symbol:       return "Symbol";
-        case Operator:       return "Operator";
-        default:            return "UNKNOWN";
-    }
-}
-
-
 void free_token_data(Token* token) {
-    if (token->type == STRING_LITERAL) {
-        free(token->data.string);
+    if (token->category != Literal || token->type == STRING_LITERAL) {
+        free(token->data.lexeme);
         return;
     }
-    if (token->category == Literal) return;
-
-    // otherwise all identifiers, symbols, operators, keywords will need to free
-    free(token->data.lexeme_data);
 }
 
 void lex_except(const char* format, ...) {
@@ -170,7 +153,7 @@ TokenType get_keyword_identifier_symbol_type(const char* lexeme) {
     return NO_TYPE;
 }
 
-// Allocate a new Token and store lexeme in its lexeme_data char* segment.
+// Allocate a new Token and store lexeme in its char* segment.
 // Only symbols should use this function directly
 //  (though keywords and identifiers can be passed if it is certain of
 //  their TokenType, which create_token will deduce for the client)
@@ -179,7 +162,7 @@ Token* alloc_token_lexeme_data(TokenType type, const char* lexeme, int line) {
     t->category = type_category(type);
     t->type = type;
     t->line = line;
-    t->data.lexeme_data = strdup(lexeme);
+    t->data.lexeme = strdup(lexeme);
     return t;
 }
 
@@ -190,11 +173,11 @@ Token* create_literal_token(const char* lexeme, int line) {
 
     if (strcmp(lexeme, "true") == 0) {
         t->type = BOOL_LITERAL;
-        t->data.bool_value = true;
+        t->data.int_t = 1; // true
         return t;
     } else if (strcmp(lexeme, "false") == 0) {
         t->type = BOOL_LITERAL;
-        t->data.bool_value = false;
+        t->data.int_t = 0; // false
         return t;
     }
 
@@ -203,10 +186,10 @@ Token* create_literal_token(const char* lexeme, int line) {
         t->type = STRING_LITERAL;
 
         // trim the quotation marks for the literal
-        t->data.string = (char*) malloc(sz - 1);
+        t->data.lexeme = (char*) malloc(sz - 1);
         // move past " and copy up to and including end quote
-        strncpy(t->data.string, lexeme + 1, sz - 1);
-        t->data.string[sz - 2] = '\0'; // replace end quote with null byte
+        strncpy(t->data.lexeme, lexeme + 1, sz - 1);
+        t->data.lexeme[sz - 2] = '\0'; // replace end quote with null byte
 
         return t;
     }
@@ -234,7 +217,7 @@ Token* create_literal_token(const char* lexeme, int line) {
 
     if (is_num) {
         t->type = INT_LITERAL;
-        t->data.integer.value = u_val;
+        t->data.int_t = u_val;
         return t;
     }
 
@@ -548,7 +531,7 @@ Token* get_char_token(FILE* fp, char c, int line) {
         t->line = line;
         t->category = Literal;
         t->type = CHAR_LITERAL;
-        t->data.integer.value = content;
+        t->data.int_t = content;
         return t;
     }
 

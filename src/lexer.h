@@ -91,27 +91,19 @@ typedef struct {
     Category category;
     int line;
     union {
-        // integer literal:
-        struct {
-            uint64_t value; // stores char literal as ascii
-            // TODO likely add the different types for different TokenTypes
-        } integer;
-
-        bool bool_value;
+        // integer (and char/bool/null) literal:
+        // for bool: 0 is false, non-zero is true
+        uint64_t int_t;
 
         // float literal:
         double f64_value;
 
-        // string literal:
-        char* string;
-
-        // for identifier names, the keyword, and symbol representations:
-        char* lexeme_data;
+        // string literals, identifier names, keywords, symbol representations
+        char* lexeme;
     } data;
 } Token;
 
 const char* tok_string(TokenType type);
-const char* tok_cat_string(Category cat);
 void free_token_data(Token* token);
 void lex_except(const char* format, ...);
 Token* alloc_token_lexeme_data(TokenType type, const char* lexeme, int line);

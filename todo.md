@@ -1,4 +1,3 @@
-[ ] Make more integer types with specific bit counts via c-ints
-[ ] Make pointers
-
-[ ] Type checker
+- [x] Make more integer types with specific bit counts via c-ints (this is actually something to implement code gen because we already have type specifiers)
+- [ ] Type checker
+- [ ] Make pointers

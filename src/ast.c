@@ -141,17 +141,15 @@ ASTNode* create_literal(Token* token) {
 
     switch(token->type) {
         case CHAR_LITERAL:
+        case BOOL_LITERAL:
         case INT_LITERAL:
-            node->literal.i = token->data.integer.value;
+            node->literal.i = token->data.int_t;
             break;
         case FLOAT_LITERAL:
             node->literal.f = token->data.f64_value;
             break;
         case STRING_LITERAL:
-            node->literal.s = strdup(token->data.string);
-            break;
-        case BOOL_LITERAL:
-            node->literal.i = token->data.bool_value;
+            node->literal.s = strdup(token->data.lexeme);
             break;
         case NULL_KEYWORD:
             node->literal.i = 0;
@@ -204,7 +202,7 @@ void print_ast(ASTNode* node, int indent) {
             else if (node->token->type == STRING_LITERAL)
                 printf("String Literal: \"%s\"\n", node->literal.s);
             else if (node->token->type == BOOL_LITERAL)
-                printf("Boolean Literal: %s\n", node->token->data.bool_value ? "true" : "false");
+                printf("Boolean Literal: %s\n", (node->token->data.int_t != 0) ? "true" : "false");
             else if (node->token->type == NULL_KEYWORD)
                 printf("Null Literal\n");
             break;
