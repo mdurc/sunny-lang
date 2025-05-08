@@ -87,7 +87,7 @@ struct ASTNode {
         struct {
             ASTNode *init_expr;
             ASTNode *end_expr;
-            char* iterator;
+            ASTNode *iter_expr;
             ASTNode* body;
         } for_stmt;
 
@@ -112,7 +112,7 @@ ASTNode* create_param(ASTNode* type, const char* name);
 ASTNode* create_return(ASTNode* expr);
 ASTNode* create_print(ASTNode* expr);
 ASTNode* create_if(ASTNode* cond, ASTNode* then_block, ASTNode* else_block);
-ASTNode* create_for(const char* iter, ASTNode* init, ASTNode* end, ASTNode* body);
+ASTNode* create_for(ASTNode* init, ASTNode* end, ASTNode* iter, ASTNode* body);
 ASTNode* create_var_decl(ASTNode* type, const char* name, ASTNode* init);
 
 void print_ast(ASTNode* node, int indent);

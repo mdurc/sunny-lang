@@ -191,20 +191,22 @@ ASTNode* parse_statement(Parser* p) {
         advance(p);
         consume(p, LPAREN, "Expected '(' after for");
 
-        // Variable declaration is not allowed in for loops
-        Token* iter = current(p);
-        consume(p, IDENTIFIER, "Expected iterator name");
+        ASTNode* init = NULL;
+        if (match(p, MUT) || current(p)->category == Primitive_type) {
+            init = parse_var_decl(p);
+        } else if (match(p, IDENTIFIER)) {
+            init = parse_expression(p);
+            consume(p, SEMICOLON, "Expected ';' in for loop");
+        }
 
-        // Assignment is required (thus it must be mutable)
-        consume(p, WALRUS, "Expected ':=' in for loop");
-        ASTNode* init = parse_expression(p);
-
-        consume(p, SEMICOLON, "Expected ';' in for loop");
         ASTNode* end = parse_expression(p);
+        consume(p, SEMICOLON, "Expected ';' in for loop");
+
+        ASTNode* iter = parse_expression(p);
         consume(p, RPAREN, "Expected ')' after for loop");
 
         ASTNode* body = parse_block(p);
-        return create_for(iter->data.lexeme, init, end, body);
+        return create_for(init, end, iter, body);
     }
 
     // parse variable declaration (with possible initialization)

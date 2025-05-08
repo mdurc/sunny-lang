@@ -81,12 +81,12 @@ ASTNode* create_while(ASTNode* cond, ASTNode* body) {
     return node;
 }
 
-ASTNode* create_for(const char* iter, ASTNode* init, ASTNode* end, ASTNode* body) {
+ASTNode* create_for(ASTNode* init, ASTNode* end, ASTNode* iter, ASTNode* body) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_FOR;
-    node->for_stmt.iterator = strdup(iter);
     node->for_stmt.init_expr = init;
     node->for_stmt.end_expr = end;
+    node->for_stmt.iter_expr = iter;
     node->for_stmt.body = body;
     return node;
 }
@@ -238,11 +238,12 @@ void print_ast(ASTNode* node, int indent) {
             break;
         case NODE_FOR:
             printf("For Loop:\n");
-            printf("%*sIterator: %s\n", (indent+1)*2, "", node->for_stmt.iterator);
-            printf("%*sInitialized to:\n", (indent+1)*2, "");
+            printf("%*sInitialization:\n", (indent+1)*2, "");
             print_ast(node->for_stmt.init_expr, indent+2);
-            printf("%*sEnd:\n", (indent+1)*2, "");
+            printf("%*sEnd Condition:\n", (indent+1)*2, "");
             print_ast(node->for_stmt.end_expr, indent+2);
+            printf("%*sIteration:\n", (indent+1)*2, "");
+            print_ast(node->for_stmt.iter_expr, indent+2);
             printf("%*sBody:\n", (indent+1)*2, "");
             print_ast(node->for_stmt.body, indent+2);
             break;
@@ -337,7 +338,7 @@ void free_ast(ASTNode* node) {
             break;
 
         case NODE_FOR:
-            free(node->for_stmt.iterator);
+            free_ast(node->for_stmt.iter_expr);
             free_ast(node->for_stmt.init_expr);
             free_ast(node->for_stmt.end_expr);
             free_ast(node->for_stmt.body);
