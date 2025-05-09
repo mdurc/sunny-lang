@@ -20,7 +20,6 @@ typedef enum {
     RETURN,         // return
     RETURNS,        // returns
     MUT,            // mut
-    NULL_KEYWORD,   // null (of type u0)
     IDENTIFIER,
 
     // primitive types:
@@ -40,7 +39,9 @@ typedef enum {
 
     // literals:
     CHAR_LITERAL,   // 'a'
-    BOOL_LITERAL,   // true, false
+    NULL_LITERAL,   // null (of type u0)
+    TRUE,           // true
+    FALSE,          // false
     INT_LITERAL,    // 42, 0xFF, 0b1010
     FLOAT_LITERAL,  // 3.14
     STRING_LITERAL, // "text"
@@ -98,12 +99,13 @@ typedef struct {
         // float literal:
         double f64_value;
 
-        // string literals, identifier names, keywords, symbol representations
+        // string literals, identifier names, keywords
         char* lexeme;
     } data;
 } Token;
 
 const char* tok_string(TokenType type);
+bool match_char(FILE* fp, char c);
 void free_token_data(Token* token);
 Token* alloc_token_lexeme_data(TokenType type, const char* lexeme, int line);
 Token* create_literal_token(const char* lexeme, int line);

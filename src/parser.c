@@ -359,8 +359,9 @@ ASTNode* parse_primary(Parser* p) {
         case FLOAT_LITERAL:
         case STRING_LITERAL:
         case CHAR_LITERAL:
-        case BOOL_LITERAL:
-        case NULL_KEYWORD: {
+        case TRUE:
+        case FALSE:
+        case NULL_LITERAL: {
             ASTNode* lit = create_literal(advance(p));
             return lit;
         }

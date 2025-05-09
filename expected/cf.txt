@@ -1,0 +1,82 @@
+
+Generated AST:
+Block (6 statements):
+  Variable Declaration:
+    Name: x
+    Type:
+      Primitive: mut u8
+    Initial Value:
+      Integer Literal: 0
+  Variable Declaration:
+    Name: y
+    Type:
+      Primitive: mut u8
+    Initial Value:
+      Integer Literal: 10
+  Variable Declaration:
+    Name: condition
+    Type:
+      Primitive: bool
+    Initial Value:
+      Boolean Literal: true
+  If Statement:
+    Condition:
+      Binary Operation: and
+        Binary Operation: <
+          Identifier: x
+          Identifier: y
+        Identifier: condition
+    Then Block:
+      Block (2 statements):
+        Print Statement:
+          String Literal: "first block"
+        Variable Assignment:
+          Name: x
+          New Value:
+            Binary Operation: +
+              Identifier: x
+              Integer Literal: 1
+    Else Block:
+      Block (1 statements):
+        If Statement:
+          Condition:
+            Binary Operation: or
+              Binary Operation: =
+                Identifier: x
+                Identifier: y
+              Unary Operation: !
+                Identifier: condition
+          Then Block:
+            Block (1 statements):
+              Print Statement:
+                String Literal: "second block"
+          Else Block:
+            Block (1 statements):
+              Print Statement:
+                String Literal: "third block"
+  Variable Declaration:
+    Name: i
+    Type:
+      Primitive: mut u8
+    Initial Value: NULL
+  For Loop:
+    Initialization:
+      Variable Assignment:
+        Name: i
+        New Value:
+          Integer Literal: 0
+    End Condition:
+      Binary Operation: <
+        Identifier: i
+        Integer Literal: 5
+    Iteration:
+      Variable Assignment:
+        Name: i
+        New Value:
+          Binary Operation: +
+            Identifier: i
+            Integer Literal: 1
+    Body:
+      Block (1 statements):
+        Print Statement:
+          Identifier: i

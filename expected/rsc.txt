@@ -1,0 +1,74 @@
+
+Generated AST:
+Block (10 statements):
+  Variable Declaration:
+    Name: foo
+    Type:
+      Primitive: mut u8
+    Initial Value:
+      Integer Literal: 4
+  Variable Declaration:
+    Name: bar
+    Type:
+      Primitive: u8
+    Initial Value:
+      Integer Literal: 8
+  Variable Assignment:
+    Name: foo
+    New Value:
+      Identifier: bar
+  Variable Declaration:
+    Name: my_float
+    Type:
+      Primitive: f64
+    Initial Value: NULL
+  Variable Declaration:
+    Name: str
+    Type:
+      Primitive: String
+    Initial Value:
+      String Literal: "this is a string"
+  Variable Declaration:
+    Name: my_bool
+    Type:
+      Primitive: bool
+    Initial Value:
+      Boolean Literal: true
+  Variable Declaration:
+    Name: my_char_lit
+    Type:
+      Primitive: u8
+    Initial Value:
+      Char Literal (ascii): 97
+  Function: ADD
+    Return Type:
+      Parameter: z
+      Type:
+        Primitive: u8
+    Parameters (2):
+      Parameter: x
+      Type:
+        Primitive: u8
+      Parameter: y
+      Type:
+        Primitive: u8
+    Body:
+      Block (1 statements):
+        Variable Assignment:
+          Name: z
+          New Value:
+            Binary Operation: +
+              Identifier: x
+              Identifier: y
+  Function: FOO
+    Return Type:
+      Primitive: u0
+    Parameters (0):
+    Body:
+      Block (1 statements):
+        Print Statement:
+          String Literal: "this is a void function with no return type"
+  Function Call: ADD
+    Arguments (2):
+      Integer Literal: 5
+      Integer Literal: 2

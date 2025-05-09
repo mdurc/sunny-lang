@@ -81,7 +81,7 @@ int main(int argc, char** argv){
     //test_number_parsing();
 
     //run_test("u8 hi := 3 -2;");
-    run_test("u8 h := 3.;");
+    run_test("u8 h := 3;");
     //run_test("u8 my_number := 13 >= 3 < 1 <= 3 >= 2 != 1;");
     //run_test("f64 hi := 3.14;");
     //run_test("func ADD(u8 x, u8 y) { }");

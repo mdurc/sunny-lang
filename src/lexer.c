@@ -6,10 +6,9 @@
 
 Category type_category(TokenType type) {
     switch (type) {
-        case FUNC: case AND:
+        case FUNC: case AND: case MUT:
         case OR: case IF: case ELSE: case FOR:
         case WHILE: case PRINT: case RETURN: case RETURNS:
-        case MUT: case NULL_KEYWORD:
             return Keyword;
 
         case IDENTIFIER:
@@ -20,7 +19,7 @@ Category type_category(TokenType type) {
         case I64_TYPE: case F64_TYPE: case BOOL_TYPE: case STRING_TYPE:
             return Primitive_type;
 
-        case BOOL_LITERAL: case CHAR_LITERAL:
+        case TRUE: case FALSE: case CHAR_LITERAL: case NULL_LITERAL:
         case INT_LITERAL: case STRING_LITERAL: case FLOAT_LITERAL:
             return Literal;
 
@@ -54,7 +53,9 @@ const char* tok_string(TokenType type) {
         case RETURN:        return "return";
         case RETURNS:       return "returns";
         case MUT:           return "mut";
-        case NULL_KEYWORD:  return "null";
+        case NULL_LITERAL:  return "null";
+        case TRUE:          return "true";
+        case FALSE:         return "false";
 
                             // primitive types
         case U0_TYPE:       return "u0";
@@ -99,153 +100,59 @@ const char* tok_string(TokenType type) {
         case GREATER:       return ">";
         case GREATER_EQUAL: return ">=";
 
-        // either an identifier or literal, as these are the two
+        // either an identifier or literal (besides true/false/null), as these are the two
         // categories that are ommitted due to not being constant
         default:            return "UNKNOWN";
     }
 }
 
-void free_token_data(Token* token) {
-    if (token->category != Literal || token->type == STRING_LITERAL) {
-        free(token->data.lexeme);
-        return;
-    }
-}
-
-bool is_valid_identifier(const char* lexeme) {
-    if (lexeme[0] == '\0') return false;
-    if (!isalpha(lexeme[0]) && lexeme[0] != '_') return false;
-    for (int i = 1; lexeme[i] != '\0'; ++i) {
-        if (!isalnum(lexeme[i]) && lexeme[i] != '_') {
-            return false;
-        }
-    }
-    return true;
-}
-
-// Get token type where lexeme is limited to possibly being:
-// keyword, valid possible identifier name, symbol
-TokenType get_keyword_identifier_symbol_type(const char* lexeme) {
-    // this loop will only find non-literals and non-identifiers
+TokenType lookup_type(const char* str) {
     for (int i = 0; i < NO_TYPE; ++i) {
         TokenType type = (TokenType)i;
-        if (strcmp(lexeme, tok_string(type)) == 0) {
+        if (strcmp(str, tok_string(type)) == 0) {
             return type;
         }
     }
-
-    // only works because if we are facing a literal it will
-    // never be mistaken for identifier (except for true and false)
-    if (strcmp(lexeme,"true")!=0 && strcmp(lexeme,"false")!=0 && is_valid_identifier(lexeme)) {
-        return IDENTIFIER;
-    }
-
-    // must be a literal
     return NO_TYPE;
 }
 
+void free_token_data(Token* token) {
+    if ((token->category == Literal && token->type != STRING_LITERAL)
+        || token->category == Symbol || token->category == Operator) return;
+    free(token->data.lexeme);
+}
+
 // Allocate a new Token and store lexeme in its char* segment.
-// Only symbols should use this function directly
-//  (though keywords and identifiers can be passed if it is certain of
-//  their TokenType, which create_token will deduce for the client)
-Token* alloc_token_lexeme_data(TokenType type, const char* lexeme, int line) {
+// Used for string literals, keywords, and identifiers (keywords and idents should be verified first)
+Token* create_lexeme_token(TokenType type, const char* lexeme, int line) {
     Token* t = (Token*) malloc(sizeof(Token)); // memory passed to the caller
     t->category = type_category(type);
     t->type = type;
     t->line = line;
-    t->data.lexeme = strdup(lexeme);
-    return t;
-}
 
-Token* create_literal_token(const char* lexeme, int line) {
-    Token* t = (Token*) malloc(sizeof(Token)); // memory passed to the caller
-    t->line = line;
-    t->category = Literal;
-
-    if (strcmp(lexeme, "true") == 0) {
-        t->type = BOOL_LITERAL;
-        t->data.int_t = 1; // true
-        return t;
-    } else if (strcmp(lexeme, "false") == 0) {
-        t->type = BOOL_LITERAL;
-        t->data.int_t = 0; // false
-        return t;
-    }
-
-    int sz = strlen(lexeme); // does not include null byte
-    if (lexeme[0] == '"' && lexeme[sz - 1] == '"') {
-        t->type = STRING_LITERAL;
-
+    int sz = strlen(lexeme);
+    if (type == STRING_LITERAL && lexeme[0] == '"' && lexeme[sz - 1] == '"') {
         // trim the quotation marks for the literal
         t->data.lexeme = (char*) malloc(sz - 1);
         // move past " and copy up to and including end quote
         strncpy(t->data.lexeme, lexeme + 1, sz - 1);
         t->data.lexeme[sz - 2] = '\0'; // replace end quote with null byte
-
-        return t;
+    } else {
+        t->data.lexeme = strdup(lexeme);
     }
-
-    // check number literals:
-
-    size_t num_len = strlen(lexeme);
-    int base = 10;
-    // determine base if literal specifies
-    if (num_len >= 2) {
-        if (lexeme[0] == '0') {
-            if (lexeme[1] == 'x' || lexeme[1] == 'X') {
-                base = 16;
-            } else if (lexeme[1] == 'b' || lexeme[1] == 'B') {
-                base = 2;
-                lexeme += 2; // move past 0b...
-            }
-        }
-    }
-
-    char* iEnd;
-    uint64_t u_val;
-    u_val = strtoull(lexeme, &iEnd, base); // handles different bases for us
-    bool is_num = (iEnd == lexeme + strlen(lexeme)) && (*iEnd == '\0');
-
-    if (is_num) {
-        t->type = INT_LITERAL;
-        t->data.int_t = u_val;
-        return t;
-    }
-
-    char* fEnd;
-    double fValue = strtod(lexeme, &fEnd);
-    bool is_float = (fEnd == lexeme + strlen(lexeme)) && (*fEnd == '\0');
-
-    if (is_float) {
-        t->type = FLOAT_LITERAL;
-        t->data.f64_value = fValue;
-        return t;
-    }
-
-
-    free_token_data(t);
-    free(t);
-    return NULL;
+    return t;
 }
 
-// Lexeme should be a keyword or an identifier
-//  (because symbol types should be known easily by client)
-// This will interpret the lexeme and find what the corresponding TokenType is
-Token* create_token(const char* lexeme, int line) {
-    TokenType type = get_keyword_identifier_symbol_type(lexeme);
-    if (type != NO_TYPE) {
-        return alloc_token_lexeme_data(type, lexeme, line);
-    }
-
-    Token* tok = create_literal_token(lexeme, line);
-    if (tok != NULL) {
-        return tok;
-    }
-
-    throw_error(line, "Lexer", "invalid token (%s)\n", lexeme);
-    return NULL;
+// For tokens that store no data in the Token.data
+Token* create_no_data_token(TokenType type, int line) {
+    Token* t = (Token*) malloc(sizeof(Token)); // memory passed to the caller
+    t->category = type_category(type);
+    t->type = type;
+    t->line = line;
+    return t;
 }
 
+// Adding token to the list of Tokens
 void add_token(Token*** tokens, int* token_count, int* token_capacity, Token* token){
     if (token == NULL) return;
     if (*token_count >= *token_capacity) {
@@ -259,90 +166,102 @@ void add_token(Token*** tokens, int* token_count, int* token_capacity, Token* to
     ++(*token_count);
 }
 
-char* alloc_lex_buf(int capacity) {
-    char* buf = (char*) malloc(capacity * sizeof(char));
-    if (buf == NULL) {
-        throw_error(-1, "Lexer", "malloc failed in alloc_lex_buf\n");
-        return NULL;
-    }
-    return buf;
-}
-
-
-// return the single char symbol, or one of the hard-coded compound symbols
-char* get_symbol(FILE* fp, char c) {
-    int len = 0;
-    int capacity = 3; // longest symbol right now is 2, add 1 for null byte
-    char* lexeme = alloc_lex_buf(capacity);
-    lexeme[len++] = c;
-
-    int next_char_int = fgetc(fp);
-    if (next_char_int != EOF) {
-        char next_c = (char) next_char_int;
-        if ((c == ':' && next_c == '=') ||
-            (c == '!' && next_c == '=') ||
-            (c == '<' && next_c == '=') ||
-            (c == '>' && next_c == '=')) {
-            lexeme[len++] = next_c;
-        } else {
-            ungetc(next_char_int, fp);
-        }
-    }
-
-    lexeme[len] = '\0';
-    return lexeme;
-}
-
-char* get_number(FILE* fp, char c, int line) {
+// Put either keyword or identifier (whichever the following chars that are read are) into the list of tokens
+// Only called when c is an alpha or _, so that we know it is not any string/number literal
+void put_keyword_indentifier_token(Token*** tokens, int* token_count, int* token_capacity, FILE* fp, char c, int line) {
     int len = 0;
     int capacity = 16;
-    char* lexeme = alloc_lex_buf(capacity);
+    char* lexeme = malloc(sizeof(char) * capacity);
     lexeme[len++] = c;
 
+    int c_int;
+    while ((c_int = fgetc(fp)) != EOF) {
+        char next_c = (char) c_int;
+
+        if (isalnum(next_c) || next_c == '_') {
+            // resize if necessary
+            if (len >= capacity - 1) {
+                capacity *= 2;
+                lexeme = realloc(lexeme, capacity);
+            }
+            lexeme[len++] = next_c;
+        } else {
+            ungetc(c_int, fp);
+            break;
+        }
+    }
+    lexeme[len] = '\0';
+
+    Token* t = NULL;
+    TokenType type = lookup_type(lexeme);
+    if (type == NO_TYPE) {
+        type = IDENTIFIER;
+    }
+    if (type_category(type) == Literal) {
+        // it must be either null/true/false because
+        // int/float/string/char literals are not found in the lookup
+        t = create_no_data_token(type, line);
+    } else {
+        t = create_lexeme_token(type, lexeme, line);
+    }
+    free(lexeme);
+    add_token(tokens, token_count, token_capacity, t);
+}
+
+// Parse subsequent number (int and float) literal
+Token* get_number_token(FILE* fp, char c, int line) {
+    int len = 0;
+    int capacity = 16;
+    char* lexeme = malloc(sizeof(char) * capacity);
+    lexeme[len++] = c;
+
+    int base = 10;
     bool is_hex = false;
     bool is_binary = false;
     bool has_decimal = false;
 
-    int next_char_int;
+    int c_int;
     // if it starts with a zero, we have to deduce the base
     if (c == '0') {
-        next_char_int = fgetc(fp);
-        if (next_char_int != EOF) {
-            char next_c = (char)next_char_int;
-            if (next_c == 'x' || next_c == 'X') {
+        c_int = fgetc(fp);
+        if (c_int != EOF) {
+            c = (char) c_int;
+            if (c == 'x' || c == 'X') {
                 is_hex = true;
-                lexeme[len++] = next_c;
-            } else if (next_c == 'b' || next_c == 'B') {
+                base = 16;
+                lexeme[len++] = c;
+            } else if (c == 'b' || c == 'B') {
                 is_binary = true;
-                lexeme[len++] = next_c;
+                base = 2;
+                lexeme[len++] = c;
             } else {
                 // it is either just another integer, or an invalid character
                 // either way we can simply un-get and continue, because these
                 // will be addressed in the loop below
-                ungetc(next_char_int, fp);
+                ungetc(c_int, fp);
             }
         }
     }
 
     while (1) {
-        next_char_int = fgetc(fp);
-        if (next_char_int == EOF) break;
-        char next_c = (char)next_char_int;
+        c_int = fgetc(fp);
+        if (c_int == EOF) break;
+        c = (char) c_int;
 
         bool valid = false;
 
         if (is_hex) {
-            valid = isxdigit(next_c);
+            valid = isxdigit(c);
         } else if (is_binary) {
-            valid = (next_c == '0' || next_c == '1');
+            valid = (c == '0' || c == '1');
         } else if (has_decimal) {
-            if (isdigit(next_c)) {
+            if (isdigit(c)) {
                 valid = true;
             }
         } else {
-            if (isdigit(next_c)) {
+            if (isdigit(c)) {
                 valid = true;
-            } else if (next_c == '.' && !has_decimal) {
+            } else if (c == '.' && !has_decimal) {
                 valid = true;
                 has_decimal = true;
             }
@@ -353,33 +272,66 @@ char* get_number(FILE* fp, char c, int line) {
                 capacity *= 2;
                 lexeme = realloc(lexeme, capacity);
             }
-            lexeme[len++] = next_c;
+            lexeme[len++] = c;
         } else {
-            ungetc(next_char_int, fp);
+            ungetc(c_int, fp);
             break;
         }
     }
 
     if (len >= 1 && lexeme[len-1] == '.') {
+        free(lexeme);
         throw_error(line, "Lexer", "trailing '.' characters are not allowed as identifiers or floats\n");
     }
     lexeme[len] = '\0';
-    return lexeme;
+
+    if (!has_decimal) {
+        char* iEnd;
+        uint64_t u_val;
+        char* start_num = base == 2 ? lexeme + 2 : lexeme; // we have to omit the 0b
+        u_val = strtoull(start_num, &iEnd, base); // handles different bases for us
+        bool is_num = (iEnd == lexeme + strlen(lexeme)) && (*iEnd == '\0');
+
+        free(lexeme);
+        if (!is_num) {
+            throw_error(line, "Lexer", "Parsed number lexeme was not a number\n");
+        }
+
+        Token* t = (Token*) malloc(sizeof(Token));
+        t->category = Literal;
+        t->type = INT_LITERAL;
+        t->data.int_t = u_val;
+        t->line = line;
+        return t;
+    } else {
+        char* fEnd;
+        double f_val = strtod(lexeme, &fEnd);
+        bool is_float = (fEnd == lexeme + strlen(lexeme)) && (*fEnd == '\0');
+
+        free(lexeme);
+        if (!is_float) {
+            throw_error(line, "Lexer", "Parsed number lexeme was not a number\n");
+        }
+
+        Token* t = (Token*) malloc(sizeof(Token));
+        t->category = Literal;
+        t->type = FLOAT_LITERAL;
+        t->data.f64_value = f_val;
+        t->line = line;
+        return t;
+    }
 }
 
-// get string literal
-char* get_string(FILE* fp, char c, int line) {
-    if (c != '"') {
-        throw_error(line, "Lexer", "string literal should begin with '\"'\n");
-    }
+// Parse subsequent string literal
+Token* get_string_token(FILE* fp, char c, int line) {
     bool escape_next = false;
-    int next_char_int;
+    int c_int;
     int len = 0;
     int capacity = 16;
-    char* lexeme = alloc_lex_buf(capacity);
+    char* lexeme = malloc(sizeof(char) * capacity);
     lexeme[len++] = c;
-    while ((next_char_int = fgetc(fp)) != EOF) {
-        char next_c = (char)next_char_int;
+    while ((c_int = fgetc(fp)) != EOF) {
+        char next_c = (char)c_int;
 
         // escape sequences (e.g., \", \n, \\)
         if (escape_next) {
@@ -397,7 +349,9 @@ char* get_string(FILE* fp, char c, int line) {
             // end of string literal
             lexeme[len++] = next_c;
             lexeme[len] = '\0';
-            return lexeme;
+            Token* str_token = create_lexeme_token(STRING_LITERAL, lexeme, line);
+            free(lexeme);
+            return str_token;
         }
 
         if (len >= capacity - 1) {
@@ -410,101 +364,36 @@ char* get_string(FILE* fp, char c, int line) {
 
     // we did not find closing quote
     free(lexeme);
-    throw_error(line, "Lexer", "unterminated string literal in lexeme");
+    throw_error(line, "Lexer", "unterminated string literal in lexeme\n");
     return NULL;
 }
 
-char* get_identifier(FILE* fp, char c) {
-    int len = 0;
-    int capacity = 16;
-    char* lexeme = alloc_lex_buf(capacity);
-    lexeme[len++] = c;
-
-    int next_char_int;
-    while ((next_char_int = fgetc(fp)) != EOF) {
-        char next_c = (char) next_char_int;
-
-        if (isalnum(next_c) || next_c == '_') {
-            // resize if necessary
-            if (len >= capacity - 1) {
-                capacity *= 2;
-                lexeme = realloc(lexeme, capacity);
-            }
-            lexeme[len++] = next_c;
-        } else {
-            ungetc(next_char_int, fp);
-            break;
-        }
-    }
-
-    lexeme[len] = '\0';
-    return lexeme;
-}
-
-
-
-char* get_lexeme(FILE* fp, char c, int line) {
-    // From c that was just consumed by fp, this will return the full lexeme string that makes up the token based on the value of 'c'
-    // Handles, numbers, string literals, identifiers, and single-char/compound symbols
-    // Deduces ints in different forms: 42, 0xFF, 0b1010
-    // floats must be in the form ((<int>)+) . (<int>)*
-
-    if (c == '.') {
-        throw_error(line, "Lexer", "leading '.' characters are not allowed as identifiers or floats\n");
-        return NULL;
-    }
-
-    if (c == '"') {
-        return get_string(fp, c, line);
-    }
-
-    if (isdigit(c)) {
-        // we do not have any "negative" literals in this language
-        return get_number(fp, c, line);
-    }
-
-    if (c == '_' || isalpha(c)) {
-        return get_identifier(fp, c);
-    }
-
-
-    if (strchr("(){}[]:;,~!+-/*=%<>", c) != NULL) {
-        // may be a compound symbol
-        return get_symbol(fp, c);
-    }
-
-    throw_error(line, "Lexer", "no valid lexeme format found for start char: %c\n", c);
-    return NULL;
-}
-
-Token* get_char_token(FILE* fp, char c, int line) {
-    if (c != '\'') {
-        throw_error(line, "Lexer", "char literals must start and end with single quotes\n");
-        return NULL;
-    }
-    // single quote will always represent start of char literal
-    int ni = fgetc(fp);
-    if (ni == EOF) throw_error(line, "Lexer", "no closing single quote before EOF\n");
-
-    int content = ni;
-    if (((char) ni) == '\\') {
-        throw_error(line, "Lexer", "char cannot contain backslash\n");
-    }
+// Parse subsequent char literal
+Token* get_char_token(FILE* fp, int line) {
+    int char_content = fgetc(fp);
+    if (char_content == EOF) throw_error(line, "Lexer", "no char or end single quote found before EOF\n");
+    if (((char) char_content) == '\\') throw_error(line, "Lexer", "char content cannot be backslash\n");
 
     // get the closing quote
-    ni = fgetc(fp);
-    if (ni == EOF) throw_error(line, "Lexer", "no closing single quote before EOF\n");
-    if (((char) ni) == '\'') {
-        Token* t = (Token*) malloc(sizeof(Token));
-        t->line = line;
-        t->category = Literal;
-        t->type = CHAR_LITERAL;
-        t->data.int_t = content;
-        return t;
-    }
+    int c_int = fgetc(fp);
+    if (c_int == EOF || ((char) c_int) != '\'') throw_error(line, "Lexer", "no end single quote found\n");
 
-    throw_error(line, "Lexer", "started with single quote but token is not a char literal\n");
-    return NULL;
+    Token* t = (Token*) malloc(sizeof(Token));
+    t->line = line;
+    t->category = Literal;
+    t->type = CHAR_LITERAL;
+    t->data.int_t = char_content;
+    return t;
+}
+
+// See if the next character in the file stream matches c, consumes if yes, otherwise puts back
+bool match_char(FILE* fp, char c) {
+    int c_int = fgetc(fp);
+    if (c_int != EOF && (char) c_int == c) {
+        return true;
+    }
+    ungetc(c_int, fp);
+    return false;
 }
 
 void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
@@ -524,52 +413,58 @@ void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
     int c_int;
     while ((c_int = getc(fp)) != EOF) {
         char c = (char) c_int;
-        if (c == '#'){ // comments
-            // move to the end of the line and go to next line
-            while ((c = getc(fp)) != EOF && c != '\n');
-            ++line;
-            continue;
-        }
-
         // we don't really have a lot of care for whitespace, semicolons and commas are primary
         // for separating statements (besides parentheses and content blocks {} [])
-        if (isspace(c)) {
+        if (isspace(c_int)) {
             if (c == '\n') ++line;
             continue;
         }
 
         switch (c) {
-            // NOTE: STARTING SYMBOLS THAT ARE A PART OF COMPOUND OPERATORS SHOULD NOT EXIST HERE
-            // ONLY ISOLATED SYMBOLS
-            case '(': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(LPAREN, "(", line)); break;
-            case ')': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(RPAREN, ")", line)); break;
-            case '{': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(LBRACE, "{", line)); break;
-            case '}': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(RBRACE, "}", line)); break;
-            case '[': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(LBRACKET, "[", line)); break;
-            case ']': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(RBRACKET, "]", line)); break;
-            case ';': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(SEMICOLON, ";", line)); break;
-            case ',': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(COMMA, ",", line)); break;
-            case '~': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(TILDE, "~", line)); break;
-            case '+': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(PLUS, "+", line)); break;
-            case '-': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(MINUS, "-", line)); break;
-            case '/': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(FSLASH, "/", line)); break;
-            case '*': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(STAR, "*", line)); break;
-            case '=': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(EQUAL, "=", line)); break;
-            case '%': add_token(tokens, token_count, token_capacity, alloc_token_lexeme_data(MODULO, "%", line)); break;
+            case '(': add_token(tokens, token_count, token_capacity, create_no_data_token(LPAREN, line)); break;
+            case ')': add_token(tokens, token_count, token_capacity, create_no_data_token(RPAREN, line)); break;
+            case '{': add_token(tokens, token_count, token_capacity, create_no_data_token(LBRACE, line)); break;
+            case '}': add_token(tokens, token_count, token_capacity, create_no_data_token(RBRACE, line)); break;
+            case '[': add_token(tokens, token_count, token_capacity, create_no_data_token(LBRACKET, line)); break;
+            case ']': add_token(tokens, token_count, token_capacity, create_no_data_token(RBRACKET, line)); break;
+            case ';': add_token(tokens, token_count, token_capacity, create_no_data_token(SEMICOLON, line)); break;
+            case ',': add_token(tokens, token_count, token_capacity, create_no_data_token(COMMA, line)); break;
+            case '~': add_token(tokens, token_count, token_capacity, create_no_data_token(TILDE, line)); break;
+            case '+': add_token(tokens, token_count, token_capacity, create_no_data_token(PLUS, line)); break;
+            case '-': add_token(tokens, token_count, token_capacity, create_no_data_token(MINUS, line)); break;
+            case '*': add_token(tokens, token_count, token_capacity, create_no_data_token(STAR, line)); break;
+            case '=': add_token(tokens, token_count, token_capacity, create_no_data_token(EQUAL, line)); break;
+            case '%': add_token(tokens, token_count, token_capacity, create_no_data_token(MODULO, line)); break;
 
-            // compound operators, keywords, identifiers, and literals
-            case '\'':
+            // compounds operators
+            case ':': add_token(tokens, token_count, token_capacity, create_no_data_token(match_char(fp, '=') ? WALRUS : COLON, line)); break;
+            case '!': add_token(tokens, token_count, token_capacity, create_no_data_token(match_char(fp, '=') ? BANG_EQUAL : BANG, line)); break;
+            case '<': add_token(tokens, token_count, token_capacity, create_no_data_token(match_char(fp, '=') ? LESS_EQUAL : LESS, line)); break;
+            case '>': add_token(tokens, token_count, token_capacity, create_no_data_token(match_char(fp, '=') ? GREATER_EQUAL : GREATER, line)); break;
+            case '\'': add_token(tokens, token_count, token_capacity, get_char_token(fp, line)); break;
+            case '"': add_token(tokens, token_count, token_capacity, get_string_token(fp, c, line)); break;
+
+            // comments
+            case '/':
               {
-                  Token* ch = get_char_token(fp, c, line);
-                  add_token(tokens, token_count, token_capacity, ch);
+                  if (match_char(fp, '/')) {
+                      // comment out the rest of the line
+                      while ((c_int = getc(fp)) != EOF && (char)c_int != '\n');
+                      ++line;
+                  } else {
+                      add_token(tokens, token_count, token_capacity, create_no_data_token(FSLASH, line));
+                  }
                   break;
               }
             default:
               {
-                  char* lexeme = get_lexeme(fp, c, line);
-                  // expected that create_token will reallocate for lexeme copies if necessary
-                  add_token(tokens, token_count, token_capacity, create_token(lexeme, line));
-                  free(lexeme);
+                  if (isdigit(c_int)) {
+                      add_token(tokens, token_count, token_capacity, get_number_token(fp, c, line));
+                  } else if (isalpha(c_int) || c == '_') {
+                      put_keyword_indentifier_token(tokens, token_count, token_capacity, fp, c, line);
+                  } else {
+                      throw_error(line, "Lexer", "unexpected token (%c)\n", c);
+                  }
                   break;
               }
         }
