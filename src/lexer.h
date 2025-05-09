@@ -105,7 +105,6 @@ typedef struct {
 
 const char* tok_string(TokenType type);
 void free_token_data(Token* token);
-void lex_except(const char* format, ...);
 Token* alloc_token_lexeme_data(TokenType type, const char* lexeme, int line);
 Token* create_literal_token(const char* lexeme, int line);
 Token* create_token(const char* lexeme, int line);

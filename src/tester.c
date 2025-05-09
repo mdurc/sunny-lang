@@ -24,13 +24,13 @@ void run_test(const char* test_str) {
             printf("null token\n");
         } else {
             if (tokens[i]->type == INT_LITERAL) {
-                printf("Int: %lld\n", (int64_t)tokens[i]->data.integer.value);
+                printf("Int: %lld\n", (int64_t)tokens[i]->data.int_t);
             } else if (tokens[i]->type == FLOAT_LITERAL) {
                 printf("Float: %f\n", tokens[i]->data.f64_value);
             } else if (tokens[i]->type == STRING_LITERAL) {
-                printf("Str: %s\n", tokens[i]->data.string);
+                printf("Str: %s\n", tokens[i]->data.lexeme);
             } else {
-                printf("Key/Ident: %s\n", tokens[i]->data.lexeme_data);
+                printf("Key/Ident: %s\n", tokens[i]->data.lexeme);
             }
         }
     }

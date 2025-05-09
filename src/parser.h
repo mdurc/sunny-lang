@@ -10,8 +10,6 @@ typedef struct {
     int size;
 } Parser;
 
-void parse_except(const char* format, ...);
-
 Parser* parser_init(Token** tokens, int count);
 ASTNode* parse_program(Parser* parser);
 ASTNode* parse_function(Parser* parser);

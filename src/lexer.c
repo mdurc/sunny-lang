@@ -1,7 +1,7 @@
 #include "lexer.h"
+#include "util.h"
 #include <assert.h>
 #include <limits.h>
-#include <stdarg.h>
 #include <stdint.h>
 
 Category type_category(TokenType type) {
@@ -110,15 +110,6 @@ void free_token_data(Token* token) {
         free(token->data.lexeme);
         return;
     }
-}
-
-void lex_except(const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    printf("Lexer exception thrown: ");
-    vprintf(format, args);
-    va_end(args);
-    exit(1);
 }
 
 bool is_valid_identifier(const char* lexeme) {
@@ -251,7 +242,7 @@ Token* create_token(const char* lexeme, int line) {
         return tok;
     }
 
-    lex_except("Invalid token: %s\n", lexeme);
+    throw_error(line, "Lexer", "invalid token (%s)\n", lexeme);
     return NULL;
 }
 
@@ -259,12 +250,7 @@ void add_token(Token*** tokens, int* token_count, int* token_capacity, Token* to
     if (token == NULL) return;
     if (*token_count >= *token_capacity) {
         *token_capacity *= 2;
-        Token** temp = (Token**) realloc(*tokens, sizeof(Token*) * (*token_capacity));
-        if (temp == NULL) {
-            lex_except("Realloc Failed on add_token\n");
-            return;
-        }
-        *tokens = temp;
+        *tokens = (Token**) realloc(*tokens, sizeof(Token*) * (*token_capacity));
         for (int i = *token_count; i < *token_capacity; ++i) {
             (*tokens)[i] = NULL;
         }
@@ -276,7 +262,7 @@ void add_token(Token*** tokens, int* token_count, int* token_capacity, Token* to
 char* alloc_lex_buf(int capacity) {
     char* buf = (char*) malloc(capacity * sizeof(char));
     if (buf == NULL) {
-        lex_except("Malloc failed in alloc_lex_buf\n");
+        throw_error(-1, "Lexer", "malloc failed in alloc_lex_buf\n");
         return NULL;
     }
     return buf;
@@ -307,7 +293,7 @@ char* get_symbol(FILE* fp, char c) {
     return lexeme;
 }
 
-char* get_number(FILE* fp, char c) {
+char* get_number(FILE* fp, char c, int line) {
     int len = 0;
     int capacity = 16;
     char* lexeme = alloc_lex_buf(capacity);
@@ -365,13 +351,7 @@ char* get_number(FILE* fp, char c) {
         if (valid) {
             if (len >= capacity - 1) {
                 capacity *= 2;
-                char* temp = realloc(lexeme, capacity);
-                if (!temp) {
-                    free(lexeme);
-                    lex_except("Realloc failed in get_number\n");
-                    return NULL;
-                }
-                lexeme = temp;
+                lexeme = realloc(lexeme, capacity);
             }
             lexeme[len++] = next_c;
         } else {
@@ -381,16 +361,16 @@ char* get_number(FILE* fp, char c) {
     }
 
     if (len >= 1 && lexeme[len-1] == '.') {
-        lex_except("Trailing '.' characters are not allowed as identifiers or floats\n");
+        throw_error(line, "Lexer", "trailing '.' characters are not allowed as identifiers or floats\n");
     }
     lexeme[len] = '\0';
     return lexeme;
 }
 
 // get string literal
-char* get_string(FILE* fp, char c) {
+char* get_string(FILE* fp, char c, int line) {
     if (c != '"') {
-        lex_except("String literal should begin with '\"'\n");
+        throw_error(line, "Lexer", "string literal should begin with '\"'\n");
     }
     bool escape_next = false;
     int next_char_int;
@@ -422,13 +402,7 @@ char* get_string(FILE* fp, char c) {
 
         if (len >= capacity - 1) {
             capacity *= 2;
-            char* temp = (char*) realloc(lexeme, capacity);
-            if (!temp) {
-                free(lexeme);
-                lex_except("Realloc failed in get_string\n");
-                return NULL;
-            }
-            lexeme = temp;
+            lexeme = (char*) realloc(lexeme, capacity);
         }
 
         lexeme[len++] = next_c;
@@ -436,7 +410,7 @@ char* get_string(FILE* fp, char c) {
 
     // we did not find closing quote
     free(lexeme);
-    lex_except("Unterminated string literal in lexeme");
+    throw_error(line, "Lexer", "unterminated string literal in lexeme");
     return NULL;
 }
 
@@ -454,13 +428,7 @@ char* get_identifier(FILE* fp, char c) {
             // resize if necessary
             if (len >= capacity - 1) {
                 capacity *= 2;
-                char* temp = realloc(lexeme, capacity);
-                if (!temp) {
-                    free(lexeme);
-                    lex_except("Realloc failed in get_identifier\n");
-                    return NULL;
-                }
-                lexeme = temp;
+                lexeme = realloc(lexeme, capacity);
             }
             lexeme[len++] = next_c;
         } else {
@@ -475,24 +443,24 @@ char* get_identifier(FILE* fp, char c) {
 
 
 
-char* get_lexeme(FILE* fp, char c) {
+char* get_lexeme(FILE* fp, char c, int line) {
     // From c that was just consumed by fp, this will return the full lexeme string that makes up the token based on the value of 'c'
     // Handles, numbers, string literals, identifiers, and single-char/compound symbols
     // Deduces ints in different forms: 42, 0xFF, 0b1010
     // floats must be in the form ((<int>)+) . (<int>)*
 
     if (c == '.') {
-        lex_except("Leading '.' characters are not allowed as identifiers or floats\n");
+        throw_error(line, "Lexer", "leading '.' characters are not allowed as identifiers or floats\n");
         return NULL;
     }
 
     if (c == '"') {
-        return get_string(fp, c);
+        return get_string(fp, c, line);
     }
 
     if (isdigit(c)) {
         // we do not have any "negative" literals in this language
-        return get_number(fp, c);
+        return get_number(fp, c, line);
     }
 
     if (c == '_' || isalpha(c)) {
@@ -505,27 +473,27 @@ char* get_lexeme(FILE* fp, char c) {
         return get_symbol(fp, c);
     }
 
-    lex_except("No valid lexeme format found for start char: %c\n", c);
+    throw_error(line, "Lexer", "no valid lexeme format found for start char: %c\n", c);
     return NULL;
 }
 
 Token* get_char_token(FILE* fp, char c, int line) {
     if (c != '\'') {
-        lex_except("Char literals must start and end with single quotes\n");
+        throw_error(line, "Lexer", "char literals must start and end with single quotes\n");
         return NULL;
     }
     // single quote will always represent start of char literal
     int ni = fgetc(fp);
-    if (ni == EOF) lex_except("No closing single quote before EOF\n");
+    if (ni == EOF) throw_error(line, "Lexer", "no closing single quote before EOF\n");
 
     int content = ni;
     if (((char) ni) == '\\') {
-        lex_except("Char cannot contain backslash\n");
+        throw_error(line, "Lexer", "char cannot contain backslash\n");
     }
 
     // get the closing quote
     ni = fgetc(fp);
-    if (ni == EOF) lex_except("No closing single quote before EOF\n");
+    if (ni == EOF) throw_error(line, "Lexer", "no closing single quote before EOF\n");
     if (((char) ni) == '\'') {
         Token* t = (Token*) malloc(sizeof(Token));
         t->line = line;
@@ -535,7 +503,7 @@ Token* get_char_token(FILE* fp, char c, int line) {
         return t;
     }
 
-    lex_except("Started with single quote but token is not a char literal\n");
+    throw_error(line, "Lexer", "started with single quote but token is not a char literal\n");
     return NULL;
 }
 
@@ -598,7 +566,7 @@ void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
               }
             default:
               {
-                  char* lexeme = get_lexeme(fp, c);
+                  char* lexeme = get_lexeme(fp, c, line);
                   // expected that create_token will reallocate for lexeme copies if necessary
                   add_token(tokens, token_count, token_capacity, create_token(lexeme, line));
                   free(lexeme);

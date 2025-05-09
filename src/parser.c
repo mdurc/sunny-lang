@@ -1,20 +1,15 @@
 #include "ast.h"
-#include <stdarg.h>
+#include "util.h"
 #include "parser.h"
-
-void parse_except(const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    printf("Parser exception thrown: ");
-    vprintf(format, args);
-    va_end(args);
-    exit(1);
-}
 
 // === For easy movement through the tokens of the parser
 // return token at the current position in the parser
 static Token* current(Parser* p) {
     return (p->pos < p->size) ? p->tokens[p->pos] : NULL;
+}
+
+static int get_token_line(Parser* p) {
+    return current(p) ? current(p)->line : -1;
 }
 
 // return token at the current position in the parser and then increment position
@@ -33,7 +28,7 @@ static void consume(Parser* p, TokenType type, const char* err) {
         advance(p);
         return;
     }
-    parse_except("Consume did not match: %s\n", err);
+    throw_error(get_token_line(p), "Parser", "expected token: %s\n", err);
 }
 // ===
 
@@ -118,7 +113,7 @@ ASTNode* parse_function(Parser* p) {
 ASTNode* parse_param(Parser* p) {
     // my_param : u8
     if (!match(p, IDENTIFIER)) {
-        parse_except("Expected parameter name before ': type'\n");
+        throw_error(get_token_line(p), "Parser", "expected parameter name before ': <TYPE>'\n");
     }
 
     Token* name = advance(p);
@@ -247,7 +242,7 @@ ASTNode* parse_assignment(Parser* p) {
         advance(p);
         if (left->type != NODE_IDENTIFIER) {
             // we should be looking at an identifier when assigning
-            parse_except("Invalid assignment target\n");
+            throw_error(get_token_line(p), "Parser", "invalid assignment target\n");
         }
         // now p is at the rhs of the assignment expression
         // do a recursive call for right associativity of assignments
@@ -382,7 +377,7 @@ ASTNode* parse_primary(Parser* p) {
             return create_unary_op(op, operand);
         }
         default:
-            parse_except("Unexpected token in expression: %s\n", tok_string(tok->type));
+            throw_error(get_token_line(p), "Parser", "unexpected token in expression: %s\n", tok_string(tok->type));
             exit(EXIT_FAILURE);
     }
 }
@@ -395,7 +390,7 @@ ASTNode* parse_type(Parser* p) {
     }
     Token* tok = current(p);
     if (tok->category != Primitive_type) {
-        parse_except("Expected type specifier, got %s\n", tok_string(tok->type));
+        throw_error(get_token_line(p), "Parser", "expected type specifier instead of: %s\n", tok_string(tok->type));
     }
 
     advance(p);
