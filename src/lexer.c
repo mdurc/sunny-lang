@@ -125,7 +125,7 @@ void free_token_data(Token* token) {
 // Allocate a new Token and store lexeme in its char* segment.
 // Used for string literals, keywords, and identifiers (keywords and idents should be verified first)
 Token* create_lexeme_token(TokenType type, const char* lexeme, int line) {
-    Token* t = (Token*) malloc(sizeof(Token)); // memory passed to the caller
+    Token* t = malloc(sizeof(Token)); // memory passed to the caller
     t->category = type_category(type);
     t->type = type;
     t->line = line;
@@ -133,7 +133,7 @@ Token* create_lexeme_token(TokenType type, const char* lexeme, int line) {
     int sz = strlen(lexeme);
     if (type == STRING_LITERAL && lexeme[0] == '"' && lexeme[sz - 1] == '"') {
         // trim the quotation marks for the literal
-        t->data.lexeme = (char*) malloc(sz - 1);
+        t->data.lexeme = malloc(sz - 1);
         // move past " and copy up to and including end quote
         strncpy(t->data.lexeme, lexeme + 1, sz - 1);
         t->data.lexeme[sz - 2] = '\0'; // replace end quote with null byte
@@ -145,7 +145,7 @@ Token* create_lexeme_token(TokenType type, const char* lexeme, int line) {
 
 // For tokens that store no data in the Token.data
 Token* create_no_data_token(TokenType type, int line) {
-    Token* t = (Token*) malloc(sizeof(Token)); // memory passed to the caller
+    Token* t = malloc(sizeof(Token)); // memory passed to the caller
     t->category = type_category(type);
     t->type = type;
     t->line = line;
@@ -157,7 +157,7 @@ void add_token(Token*** tokens, int* token_count, int* token_capacity, Token* to
     if (token == NULL) return;
     if (*token_count >= *token_capacity) {
         *token_capacity *= 2;
-        *tokens = (Token**) realloc(*tokens, sizeof(Token*) * (*token_capacity));
+        *tokens = realloc(*tokens, sizeof(Token*) * (*token_capacity));
         for (int i = *token_count; i < *token_capacity; ++i) {
             (*tokens)[i] = NULL;
         }
@@ -281,7 +281,7 @@ Token* get_number_token(FILE* fp, char c, int line) {
 
     if (len >= 1 && lexeme[len-1] == '.') {
         free(lexeme);
-        throw_error(line, "Lexer", "trailing '.' characters are not allowed as identifiers or floats\n");
+        throw_fatal_error(line, "Lexer", "trailing '.' characters are not allowed as identifiers or floats\n");
     }
     lexeme[len] = '\0';
 
@@ -294,10 +294,10 @@ Token* get_number_token(FILE* fp, char c, int line) {
 
         free(lexeme);
         if (!is_num) {
-            throw_error(line, "Lexer", "Parsed number lexeme was not a number\n");
+            throw_fatal_error(line, "Lexer", "Parsed number lexeme was not a number\n");
         }
 
-        Token* t = (Token*) malloc(sizeof(Token));
+        Token* t = malloc(sizeof(Token));
         t->category = Literal;
         t->type = INT_LITERAL;
         t->data.int_t = u_val;
@@ -310,10 +310,10 @@ Token* get_number_token(FILE* fp, char c, int line) {
 
         free(lexeme);
         if (!is_float) {
-            throw_error(line, "Lexer", "Parsed number lexeme was not a number\n");
+            throw_fatal_error(line, "Lexer", "Parsed number lexeme was not a number\n");
         }
 
-        Token* t = (Token*) malloc(sizeof(Token));
+        Token* t = malloc(sizeof(Token));
         t->category = Literal;
         t->type = FLOAT_LITERAL;
         t->data.f64_value = f_val;
@@ -356,7 +356,7 @@ Token* get_string_token(FILE* fp, char c, int line) {
 
         if (len >= capacity - 1) {
             capacity *= 2;
-            lexeme = (char*) realloc(lexeme, capacity);
+            lexeme = realloc(lexeme, capacity);
         }
 
         lexeme[len++] = next_c;
@@ -364,21 +364,21 @@ Token* get_string_token(FILE* fp, char c, int line) {
 
     // we did not find closing quote
     free(lexeme);
-    throw_error(line, "Lexer", "unterminated string literal in lexeme\n");
+    throw_fatal_error(line, "Lexer", "unterminated string literal in lexeme\n");
     return NULL;
 }
 
 // Parse subsequent char literal
 Token* get_char_token(FILE* fp, int line) {
     int char_content = fgetc(fp);
-    if (char_content == EOF) throw_error(line, "Lexer", "no char or end single quote found before EOF\n");
-    if (((char) char_content) == '\\') throw_error(line, "Lexer", "char content cannot be backslash\n");
+    if (char_content == EOF) throw_fatal_error(line, "Lexer", "no char or end single quote found before EOF\n");
+    if (((char) char_content) == '\\') throw_fatal_error(line, "Lexer", "char content cannot be backslash\n");
 
     // get the closing quote
     int c_int = fgetc(fp);
-    if (c_int == EOF || ((char) c_int) != '\'') throw_error(line, "Lexer", "no end single quote found\n");
+    if (c_int == EOF || ((char) c_int) != '\'') throw_fatal_error(line, "Lexer", "no end single quote found\n");
 
-    Token* t = (Token*) malloc(sizeof(Token));
+    Token* t = malloc(sizeof(Token));
     t->line = line;
     t->category = Literal;
     t->type = CHAR_LITERAL;
@@ -401,7 +401,7 @@ void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
         // initialize our lexer to default capacity and allocation
         *token_capacity = 100;
         *token_count = 0;
-        *tokens = (Token**) malloc(sizeof(Token*) * (*token_capacity));
+        *tokens = malloc(sizeof(Token*) * (*token_capacity));
         // (*tokens)[token*, token*, ..., token*]
         for (int i = *token_count; i < *token_capacity; ++i) {
             (*tokens)[i] = NULL;
@@ -463,7 +463,7 @@ void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
                   } else if (isalpha(c_int) || c == '_') {
                       put_keyword_indentifier_token(tokens, token_count, token_capacity, fp, c, line);
                   } else {
-                      throw_error(line, "Lexer", "unexpected token (%c)\n", c);
+                      throw_fatal_error(line, "Lexer", "unexpected token (%c)\n", c);
                   }
                   break;
               }

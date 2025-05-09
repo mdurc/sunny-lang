@@ -8,12 +8,12 @@
 int main(int argc, char** argv){
     if (argc != 2){
         fprintf(stderr, "Usage: ./a.out input.code\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     FILE* fp = fopen(argv[1], "r");
     if (fp == NULL){
         fprintf(stderr, "Invalid input file: %s\n", argv[1]);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     printf("\n");

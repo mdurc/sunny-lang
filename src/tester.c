@@ -10,7 +10,7 @@ void run_test(const char* test_str) {
     FILE* fp = fmemopen((void*)test_str, string_length, "r");
     if (fp == NULL) {
         perror("fmemopen failed");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     Token** tokens = NULL;
