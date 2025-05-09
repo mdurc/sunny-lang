@@ -38,6 +38,7 @@ Parser* parser_init(Token** tokens, int count) {
     p->tokens = tokens;
     p->pos = 0;
     p->size = count;
+    p->symtab = symtab_create(NULL); // create the global scope symbol table
     return p;
 }
 
@@ -77,6 +78,9 @@ ASTNode* parse_function(Parser* p) {
     Token* name_tok = current(p);
     consume(p, IDENTIFIER, "Expected function name");
 
+    // enter function scope
+    symtab_enter_new_scope(&p->symtab);
+
     consume(p, LPAREN, "Expected '('");
     ASTNode** params = NULL;
     int param_count = 0;
@@ -105,7 +109,17 @@ ASTNode* parse_function(Parser* p) {
         return_type = create_type(false, U0_TYPE);
     }
 
-    ASTNode* body = parse_block(p);
+    // add the function into the PARENT scope, not the current scope which is its own scope
+    Symbol* func_sym = symtab_insert(p->symtab->parent, name_tok->data.lexeme, SYM_FUNCTION, return_type, NULL, false);
+    if (func_sym == NULL) {
+        // duplicate declaration
+        throw_error(name_tok->line, "Parser", "duplicate function declaration (%s)\n", name_tok->data.lexeme);
+    }
+
+    // do not create another scope in the body
+    ASTNode* body = parse_block(p, false);
+
+    symtab_exit_scope(&p->symtab);
 
     return create_func_decl(return_type, name_tok->data.lexeme, params, param_count, body);
 }
@@ -116,14 +130,26 @@ ASTNode* parse_param(Parser* p) {
         throw_error(get_token_line(p), "Parser", "expected parameter name before ': <TYPE>'\n");
     }
 
-    Token* name = advance(p);
+    Token* name_tok = advance(p);
     consume(p, COLON, "Expected ':'");
     ASTNode* type = parse_type(p);
 
-    return create_param(type, name->data.lexeme);
+    ASTNode* param = create_param(type, name_tok->data.lexeme);
+
+    Symbol* param_sym = symtab_insert(p->symtab, param->param.name, SYM_PARAMETER, param->param.type, param, false);
+    if (param_sym == NULL) {
+        // duplicate declaration
+        throw_error(name_tok->line, "Parser", "duplicate variable declaration within parameters (%s)\n", param->param.name);
+    }
+
+    return param;
 }
 
-ASTNode* parse_block(Parser* p) {
+ASTNode* parse_block(Parser* p, bool create_scope) {
+    if (create_scope) {
+        symtab_enter_new_scope(&p->symtab);
+    }
+
     consume(p, LBRACE, "Expected '{'");
     ASTNode** stmts = NULL;
     int count = 0;
@@ -135,6 +161,10 @@ ASTNode* parse_block(Parser* p) {
         stmts[count-1] = stmt;
     }
     consume(p, RBRACE, "Expected '}'");
+
+    if (create_scope) {
+        symtab_exit_scope(&p->symtab);
+    }
 
     return create_block(stmts, count);
 }
@@ -163,28 +193,30 @@ ASTNode* parse_statement(Parser* p) {
         consume(p, LPAREN, "Expected '(' after if");
         ASTNode* cond = parse_expression(p);
         consume(p, RPAREN, "Expected ')' after if");
-        ASTNode* then_block = parse_block(p);
+        ASTNode* then_block = parse_block(p, true); // create new scope
         ASTNode* else_block = NULL;
 
         if (match(p, ELSE)) {
             advance(p);
-            else_block = parse_block(p);
+            else_block = parse_block(p, true); // new scope
         }
         return create_if(cond, then_block, else_block);
     }
 
     if (match(p, WHILE)) {
         advance(p);
-        consume(p, RPAREN, "Expected '(' after while");
+        consume(p, LPAREN, "Expected '(' after while");
         ASTNode* cond = parse_expression(p);
-        consume(p, LPAREN, "Expected ')' after while");
-        ASTNode* body = parse_block(p);
+        consume(p, RPAREN, "Expected ')' after while");
+        ASTNode* body = parse_block(p, true);
         return create_while(cond, body);
     }
 
     if (match(p, FOR)) {
         advance(p);
         consume(p, LPAREN, "Expected '(' after for");
+
+        symtab_enter_new_scope(&p->symtab); // new scope for init () and block {}
 
         ASTNode* init = NULL;
         if (match(p, MUT) || current(p)->category == Primitive_type) {
@@ -208,8 +240,17 @@ ASTNode* parse_statement(Parser* p) {
         }
         consume(p, RPAREN, "Expected ')' after for loop");
 
-        ASTNode* body = parse_block(p);
+        // the loop body has its own scope though note that the initialization
+        // vars will still be accessible from the parent scope in the block {}
+        ASTNode* body = parse_block(p, true);
+
+        symtab_exit_scope(&p->symtab); // exit loop init scope
         return create_for(init, end, iter, body);
+    }
+
+    if (match(p, LBRACE)) {
+        // create new scope
+        return parse_block(p, true);
     }
 
     // parse variable declaration (with possible initialization)
@@ -225,17 +266,23 @@ ASTNode* parse_statement(Parser* p) {
 
 ASTNode* parse_var_decl(Parser* p) {
     ASTNode* type = parse_type(p);
-    Token* name = current(p);
+    Token* name_tok = current(p);
     consume(p, IDENTIFIER, "Expected variable name");
-    ASTNode* init = NULL;
 
+    Symbol* sym = symtab_insert(p->symtab, name_tok->data.lexeme, SYM_VARIABLE, type, NULL, type->primitive.mut);
+    if (sym == NULL) {
+        // duplicate declaration
+        throw_error(name_tok->line, "Parser", "duplicate variable declaration (%s)\n", name_tok->data.lexeme);
+    }
+
+    ASTNode* init = NULL;
     if (match(p, WALRUS)) {
         advance(p);
         init = parse_expression(p);
     }
 
     consume(p, SEMICOLON, "Expected ';' after variable declaration");
-    return create_var_decl(type, name->data.lexeme, init);
+    return create_var_decl(type, name_tok->data.lexeme, init);
 }
 
 ASTNode* parse_expression(Parser* p) {
@@ -341,7 +388,12 @@ ASTNode* parse_primary(Parser* p) {
     switch(tok->type) {
         case IDENTIFIER: {
             const char* name = tok->data.lexeme;
-            advance(p);
+            Symbol* sym = symtab_lookup(p->symtab, tok->data.lexeme);
+            if (sym == NULL) {
+                // undefined variable
+                throw_error(tok->line, "Parser", "undefined variable (%s)\n", name);
+            }
+            advance(p); // actually move past the identifier
 
             // check if function call on this identifier and handle
             if (match(p, LPAREN)) {

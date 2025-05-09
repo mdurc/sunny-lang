@@ -10,7 +10,7 @@ FuncCall            = IDENTIFIER "(" Args? ")"
 Args                = Expr ("," Expr)*
 
 
-Stmt                = ReturnStmt | PrintStmt | IfStmt | WhileStmt | ForStmt | VarDecl | ExprStmt
+Stmt                = ReturnStmt | PrintStmt | IfStmt | WhileStmt | ForStmt | VarDecl | ExprStmt | Block
 ReturnStmt          = "return" Expr? ";"
 PrintStmt           = "print" Expr ";"
 IfStmt              = "if" "(" Expr ")" Block ("else" Block)?
@@ -34,9 +34,6 @@ UnaryExpr           = ("!" | "-") PrimaryExpr
 
 Literal             = INT_LITERAL | FLOAT_LITERAL | STRING_LITERAL | CHAR_LITERAL | "null" | "true" | "false"
 Type                = ("mut")? ("u0" | "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" | "f64")
-
-
-
 ```
 #### NOTES:
 + The recursive descent parser format (top down) where the outermost grammar (Expr) works its way down into the nested subexpressions before reaching the leaves which are the primary. This is ordered in precedence.

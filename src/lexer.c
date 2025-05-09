@@ -26,7 +26,7 @@ Category type_category(TokenType type) {
         case LPAREN: case RPAREN: case LBRACE: case RBRACE:
         case LBRACKET: case RBRACKET: case COLON: case SEMICOLON:
         case COMMA: case TILDE:
-            return Symbol;
+            return Punct;
 
         case BANG: case PLUS: case MINUS: case FSLASH: case STAR:
         case EQUAL: case MODULO: case WALRUS: case BANG_EQUAL:
@@ -118,7 +118,7 @@ TokenType lookup_type(const char* str) {
 
 void free_token_data(Token* token) {
     if ((token->category == Literal && token->type != STRING_LITERAL)
-        || token->category == Symbol || token->category == Operator) return;
+        || token->category == Punct || token->category == Operator) return;
     free(token->data.lexeme);
 }
 

@@ -83,7 +83,7 @@ typedef enum {
     Identifier,
     Primitive_type,
     Literal,
-    Symbol,
+    Punct,
     Operator
 } Category;
 
