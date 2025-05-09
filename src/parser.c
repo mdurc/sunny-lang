@@ -191,13 +191,21 @@ ASTNode* parse_statement(Parser* p) {
             init = parse_var_decl(p);
         } else if (match(p, IDENTIFIER)) {
             init = parse_expression(p);
-            consume(p, SEMICOLON, "Expected ';' in for loop");
+            consume(p, SEMICOLON, "Expected ';' in for loop after initialization");
+        } else {
+            consume(p, SEMICOLON, "Expected ';' in for loop after initialization");
         }
 
-        ASTNode* end = parse_expression(p);
-        consume(p, SEMICOLON, "Expected ';' in for loop");
+        ASTNode* end = NULL;
+        if (!match(p, SEMICOLON)) {
+            end = parse_expression(p);
+        }
+        consume(p, SEMICOLON, "Expected ';' in for loop after condition");
 
-        ASTNode* iter = parse_expression(p);
+        ASTNode* iter = NULL;
+        if (!match(p, RPAREN)) {
+            iter = parse_expression(p);
+        }
         consume(p, RPAREN, "Expected ')' after for loop");
 
         ASTNode* body = parse_block(p);

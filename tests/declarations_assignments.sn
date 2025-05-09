@@ -25,5 +25,3 @@ u8 n := -0xFF; // 255 decimal
 mut u8 my_original := 3;
 mut u8 new_variable;
 new_variable := my_original; // copy value
-
-
