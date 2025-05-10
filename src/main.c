@@ -1,4 +1,5 @@
 
+#include "error.h"
 #include "lexer.h"
 #include "parser.h"
 #include <assert.h>
@@ -24,6 +25,11 @@ int main(int argc, char** argv){
 
     Parser* parser = parser_init(tokens, token_count);
     ASTNode* ast = parse_program(parser);
+
+    if (parser->errors > 0) {
+        fprintf(stderr, "Compilation failed with %d errors and %d warnings.\n", parser->errors, parser->warnings);
+        exit(EXIT_FAILURE);
+    }
 
     printf("Generated AST:\n");
     print_ast(ast, 0);

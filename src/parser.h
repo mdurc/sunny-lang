@@ -10,7 +10,10 @@ typedef struct {
     int pos;
     int size;
     SymbolTable* symtab;
+
     int loop_depth;
+    int errors;
+    int warnings;
 } Parser;
 
 Parser* parser_init(Token** tokens, int count);

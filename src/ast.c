@@ -1,5 +1,5 @@
 #include "ast.h"
-#include "util.h"
+#include "error.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -159,7 +159,7 @@ ASTNode* create_literal(Token* token) {
             node->literal.i = 0;
             break;
         default:
-            fprintf(stderr, "Invalid literal type: %d\n", token->type);
+            fatal_error(token->line, "AST", "Invalid literal type: %d\n", token->type);
             exit(EXIT_FAILURE);
     }
     return node;
@@ -296,7 +296,7 @@ void print_ast(ASTNode* node, int indent) {
             }
             break;
         default:
-            printf("Unknown Node Type: %d\n", node->type);
+            fatal_error(-1, "AST", "Unknown Node Type for AST print: %d\n", node->type);
     }
 }
 
@@ -389,7 +389,7 @@ void free_ast(ASTNode* node) {
             break;
 
         default:
-            throw_warning(-1, "AST", "Warning: Unknown node type %d in free_ast\n", node->type);
+            fatal_error(-1, "AST", "Warning: Unknown node type %d in free_ast\n", node->type);
             break;
     }
 

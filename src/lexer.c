@@ -1,5 +1,5 @@
 #include "lexer.h"
-#include "util.h"
+#include "error.h"
 #include <assert.h>
 #include <limits.h>
 #include <stdint.h>
@@ -283,7 +283,7 @@ Token* get_number_token(FILE* fp, char c, int line) {
 
     if (len >= 1 && lexeme[len-1] == '.') {
         free(lexeme);
-        throw_fatal_error(line, "Lexer", "trailing '.' characters are not allowed as identifiers or floats\n");
+        fatal_error(line, "Lexer", "trailing '.' characters are not allowed as identifiers or floats\n");
     }
     lexeme[len] = '\0';
 
@@ -296,7 +296,7 @@ Token* get_number_token(FILE* fp, char c, int line) {
 
         free(lexeme);
         if (!is_num) {
-            throw_fatal_error(line, "Lexer", "Parsed number lexeme was not a number\n");
+            fatal_error(line, "Lexer", "Parsed number lexeme was not a number\n");
         }
 
         Token* t = malloc(sizeof(Token));
@@ -312,7 +312,7 @@ Token* get_number_token(FILE* fp, char c, int line) {
 
         free(lexeme);
         if (!is_float) {
-            throw_fatal_error(line, "Lexer", "Parsed number lexeme was not a number\n");
+            fatal_error(line, "Lexer", "Parsed number lexeme was not a number\n");
         }
 
         Token* t = malloc(sizeof(Token));
@@ -366,19 +366,19 @@ Token* get_string_token(FILE* fp, char c, int line) {
 
     // we did not find closing quote
     free(lexeme);
-    throw_fatal_error(line, "Lexer", "unterminated string literal in lexeme\n");
+    fatal_error(line, "Lexer", "unterminated string literal in lexeme\n");
     return NULL;
 }
 
 // Parse subsequent char literal
 Token* get_char_token(FILE* fp, int line) {
     int char_content = fgetc(fp);
-    if (char_content == EOF) throw_fatal_error(line, "Lexer", "no char or end single quote found before EOF\n");
-    if (((char) char_content) == '\\') throw_fatal_error(line, "Lexer", "char content cannot be backslash\n");
+    if (char_content == EOF) fatal_error(line, "Lexer", "no char or end single quote found before EOF\n");
+    if (((char) char_content) == '\\') fatal_error(line, "Lexer", "char content cannot be backslash\n");
 
     // get the closing quote
     int c_int = fgetc(fp);
-    if (c_int == EOF || ((char) c_int) != '\'') throw_fatal_error(line, "Lexer", "no end single quote found\n");
+    if (c_int == EOF || ((char) c_int) != '\'') fatal_error(line, "Lexer", "no end single quote found\n");
 
     Token* t = malloc(sizeof(Token));
     t->line = line;
@@ -465,7 +465,7 @@ void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
                   } else if (isalpha(c_int) || c == '_') {
                       put_keyword_indentifier_token(tokens, token_count, token_capacity, fp, c, line);
                   } else {
-                      throw_fatal_error(line, "Lexer", "unexpected token (%c)\n", c);
+                      fatal_error(line, "Lexer", "unexpected token (%c)\n", c);
                   }
                   break;
               }

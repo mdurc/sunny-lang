@@ -1,6 +1,6 @@
 #include "ast.h"
-#include "util.h"
 #include "parser.h"
+#include "error.h"
 
 // === For easy movement through the tokens of the parser
 // return token at the current position in the parser
@@ -28,7 +28,8 @@ static void consume(Parser* p, TokenType type, const char* err) {
         advance(p);
         return;
     }
-    throw_fatal_error(get_token_line(p), "Parser", "expected token: %s\n", err);
+    p->errors++;
+    error_report(get_token_line(p), "Parser", "expected token: %s\n", err);
 }
 // ===
 
@@ -39,7 +40,10 @@ Parser* parser_init(Token** tokens, int count) {
     p->pos = 0;
     p->size = count;
     p->symtab = symtab_create(NULL); // create the global scope symbol table
+
     p->loop_depth = 0;
+    p->errors = 0;
+    p->warnings = 0;
     return p;
 }
 
@@ -114,7 +118,8 @@ ASTNode* parse_function(Parser* p) {
     Symbol* func_sym = symtab_insert(p->symtab->parent, name_tok->data.lexeme, SYM_FUNCTION, return_type, NULL, false);
     if (func_sym == NULL) {
         // duplicate declaration
-        throw_fatal_error(name_tok->line, "Parser", "duplicate function declaration (%s)\n", name_tok->data.lexeme);
+        p->errors++;
+        error_report(name_tok->line, "Parser", "duplicate function declaration (%s)\n", name_tok->data.lexeme);
     }
 
     // do not create another scope in the body
@@ -128,7 +133,8 @@ ASTNode* parse_function(Parser* p) {
 ASTNode* parse_param(Parser* p) {
     // my_param : u8
     if (!match(p, IDENTIFIER)) {
-        throw_fatal_error(get_token_line(p), "Parser", "expected parameter name before ': <TYPE>'\n");
+        p->errors++;
+        error_report(get_token_line(p), "Parser", "expected parameter name before ': <TYPE>'\n");
     }
 
     Token* name_tok = advance(p);
@@ -140,7 +146,8 @@ ASTNode* parse_param(Parser* p) {
     Symbol* param_sym = symtab_insert(p->symtab, param->param.name, SYM_PARAMETER, param->param.type, param, false);
     if (param_sym == NULL) {
         // duplicate declaration
-        throw_fatal_error(name_tok->line, "Parser", "duplicate variable declaration within parameters (%s)\n", param->param.name);
+        p->errors++;
+        error_report(name_tok->line, "Parser", "duplicate variable declaration within parameters (%s)\n", param->param.name);
     }
 
     return param;
@@ -173,7 +180,8 @@ ASTNode* parse_block(Parser* p, bool create_scope) {
 ASTNode* parse_statement(Parser* p) {
     if (match(p, BREAK) || match(p, CONTINUE)) {
         if (p->loop_depth == 0) {
-            throw_fatal_error(get_token_line(p), "Parser", "break/continue outside loop");
+            p->errors++;
+            error_report(get_token_line(p), "Parser", "break/continue outside loop");
         }
 
         ASTNode* stmt = malloc(sizeof(ASTNode));
@@ -301,7 +309,8 @@ ASTNode* parse_var_decl(Parser* p) {
 
         Symbol* sym = symtab_insert(p->symtab, name_tok->data.lexeme, SYM_VARIABLE, type, NULL, type->primitive.mut);
         if (sym == NULL) {
-            throw_fatal_error(name_tok->line, "Parser", "duplicate variable declaration (%s)\n", name_tok->data.lexeme);
+            p->errors++;
+            error_report(name_tok->line, "Parser", "duplicate variable declaration (%s)\n", name_tok->data.lexeme);
         }
 
         ASTNode* init = NULL;
@@ -338,7 +347,8 @@ ASTNode* parse_assignment(Parser* p) {
         advance(p);
         if (left->type != NODE_IDENTIFIER) {
             // we should be looking at an identifier when assigning
-            throw_fatal_error(get_token_line(p), "Parser", "invalid assignment target\n");
+            p->errors++;
+            error_report(get_token_line(p), "Parser", "invalid assignment target\n");
         }
         // now p is at the rhs of the assignment expression
         // do a recursive call for right associativity of assignments
@@ -432,7 +442,8 @@ ASTNode* parse_primary(Parser* p) {
             Symbol* sym = symtab_lookup(p->symtab, tok->data.lexeme);
             if (sym == NULL) {
                 // undefined variable
-                throw_fatal_error(tok->line, "Parser", "undefined variable (%s)\n", name);
+                p->errors++;
+                error_report(tok->line, "Parser", "undefined variable (%s)\n", name);
             }
             advance(p); // actually move past the identifier
 
@@ -479,7 +490,8 @@ ASTNode* parse_primary(Parser* p) {
             return create_unary_op(op, operand);
         }
         default:
-            throw_fatal_error(get_token_line(p), "Parser", "unexpected token in expression: %s\n", tok_string(tok->type));
+            p->errors++;
+            error_report(get_token_line(p), "Parser", "unexpected token in expression: %s\n", tok_string(tok->type));
             exit(EXIT_FAILURE);
     }
 }
@@ -492,7 +504,8 @@ ASTNode* parse_type(Parser* p) {
     }
     Token* tok = current(p);
     if (tok->category != Primitive_type) {
-        throw_fatal_error(get_token_line(p), "Parser", "expected type specifier instead of: %s\n", tok_string(tok->type));
+        p->errors++;
+        error_report(get_token_line(p), "Parser", "expected type specifier instead of: %s\n", tok_string(tok->type));
     }
 
     advance(p);
