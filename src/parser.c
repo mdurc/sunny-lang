@@ -74,10 +74,11 @@ ASTNode* parse_program(Parser* p) {
     }
 
     // root is the global content block
-    return create_block(root, count);
+    return create_block(root, count, -1);
 }
 
 ASTNode* parse_function(Parser* p) {
+    int l_func = get_token_line(p);
     consume(p, FUNC, "Expected 'func'");
 
     Token* name_tok = current(p);
@@ -111,7 +112,7 @@ ASTNode* parse_function(Parser* p) {
         consume(p, RPAREN, "Expected ')'");
     } else {
         // void return type is implicit when ommitting "returns" clause
-        return_type = create_type(false, U0_TYPE);
+        return_type = create_type(false, U0_TYPE, l_func);
     }
 
     // add the function into the PARENT scope, not the current scope which is its own scope
@@ -127,7 +128,7 @@ ASTNode* parse_function(Parser* p) {
 
     symtab_exit_scope(&p->symtab);
 
-    return create_func_decl(return_type, name_tok->data.lexeme, params, param_count, body);
+    return create_func_decl(return_type, name_tok->data.lexeme, params, param_count, body, l_func);
 }
 
 ASTNode* parse_param(Parser* p) {
@@ -141,7 +142,7 @@ ASTNode* parse_param(Parser* p) {
     consume(p, COLON, "Expected ':'");
     ASTNode* type = parse_type(p);
 
-    ASTNode* param = create_param(type, name_tok->data.lexeme);
+    ASTNode* param = create_param(type, name_tok->data.lexeme, name_tok->line);
 
     Symbol* param_sym = symtab_insert(p->symtab, param->param.name, SYM_PARAMETER, param->param.type, param, false);
     if (param_sym == NULL) {
@@ -158,6 +159,7 @@ ASTNode* parse_block(Parser* p, bool create_scope) {
         symtab_enter_new_scope(&p->symtab);
     }
 
+    int l_block = get_token_line(p);
     consume(p, LBRACE, "Expected '{'");
     ASTNode** stmts = NULL;
     int count = 0;
@@ -174,7 +176,7 @@ ASTNode* parse_block(Parser* p, bool create_scope) {
         symtab_exit_scope(&p->symtab);
     }
 
-    return create_block(stmts, count);
+    return create_block(stmts, count, l_block);
 }
 
 ASTNode* parse_statement(Parser* p) {
@@ -184,8 +186,8 @@ ASTNode* parse_statement(Parser* p) {
             error_report(get_token_line(p), "Parser", "break/continue outside loop");
         }
 
-        ASTNode* stmt = malloc(sizeof(ASTNode));
-        stmt->type = match(p, BREAK) ? NODE_BREAK : NODE_CONTINUE;
+        int l = get_token_line(p);
+        ASTNode* stmt = match(p,BREAK) ? create_break(l) : create_continue(l);
         advance(p);
         consume(p, SEMICOLON, "Expected ';' after break/continue");
         return stmt;
@@ -193,24 +195,24 @@ ASTNode* parse_statement(Parser* p) {
 
     // check keywords
     if (match(p, RETURN)) {
-        advance(p);
+        Token* l_return = advance(p);
         ASTNode* expr = NULL;
         if (!match(p, SEMICOLON)) {
             expr = parse_expression(p);
         }
         consume(p, SEMICOLON, "Expected ';' after return");
-        return create_return(expr);
+        return create_return(expr, l_return->line);
     }
 
     if (match(p, PRINT)) {
-        advance(p);
+        Token* l_print = advance(p);
         ASTNode* expr = parse_expression(p);
         consume(p, SEMICOLON, "Expected ';' after print");
-        return create_print(expr);
+        return create_print(expr, l_print->line);
     }
 
     if (match(p, IF)) {
-        advance(p);
+        Token* l_if = advance(p);
         consume(p, LPAREN, "Expected '(' after if");
         ASTNode* cond = parse_expression(p);
         consume(p, RPAREN, "Expected ')' after if");
@@ -221,11 +223,11 @@ ASTNode* parse_statement(Parser* p) {
             advance(p);
             else_block = parse_block(p, true); // new scope
         }
-        return create_if(cond, then_block, else_block);
+        return create_if(cond, then_block, else_block, l_if->line);
     }
 
     if (match(p, WHILE)) {
-        advance(p);
+        Token* l_while = advance(p);
         consume(p, LPAREN, "Expected '(' after while");
         ASTNode* cond = parse_expression(p);
         consume(p, RPAREN, "Expected ')' after while");
@@ -234,11 +236,11 @@ ASTNode* parse_statement(Parser* p) {
         ASTNode* body = parse_block(p, true);
         p->loop_depth--;
 
-        return create_while(cond, body);
+        return create_while(cond, body, l_while->line);
     }
 
     if (match(p, FOR)) {
-        advance(p);
+        Token* l_for = advance(p);
         consume(p, LPAREN, "Expected '(' after for");
 
         symtab_enter_new_scope(&p->symtab); // new scope for init () and block {}
@@ -272,7 +274,7 @@ ASTNode* parse_statement(Parser* p) {
         p->loop_depth--;
 
         symtab_exit_scope(&p->symtab); // exit loop init scope
-        return create_for(init, end, iter, body);
+        return create_for(init, end, iter, body, l_for->line);
     }
 
     if (match(p, LBRACE)) {
@@ -292,6 +294,7 @@ ASTNode* parse_statement(Parser* p) {
 }
 
 ASTNode* parse_var_decl(Parser* p) {
+    int l_type = get_token_line(p);
     ASTNode* type = parse_type(p);
     ASTNode** decls = NULL;
     int count = 0;
@@ -300,7 +303,8 @@ ASTNode* parse_var_decl(Parser* p) {
         if (!first) {
             advance(p); // consume the comma
             // copy the type into a new type node for this new declaration
-            type = create_type(type->primitive.mut, type->primitive.type_spec);
+            // the type's line will always be constant
+            type = create_type(type->primitive.mut, type->primitive.type_spec, l_type);
         }
         first = false;
 
@@ -319,7 +323,7 @@ ASTNode* parse_var_decl(Parser* p) {
             init = parse_expression(p);
         }
 
-        ASTNode* decl = create_var_decl(type, name_tok->data.lexeme, init);
+        ASTNode* decl = create_var_decl(type, name_tok->data.lexeme, init, name_tok->line);
         decls = realloc(decls, ++count * sizeof(ASTNode*));
         decls[count-1] = decl;
     } while (match(p, COMMA));
@@ -332,7 +336,7 @@ ASTNode* parse_var_decl(Parser* p) {
         return single_var;
     }
     // if we have multiple declarations on this line, then return it as a block of declarations
-    return create_block(decls, count);
+    return create_block(decls, count, l_type);
 }
 
 ASTNode* parse_expression(Parser* p) {
@@ -344,7 +348,7 @@ ASTNode* parse_assignment(Parser* p) {
     ASTNode* left = parse_logic_or(p);
 
     if (match(p, WALRUS)) {
-        advance(p);
+        Token* l_walrus = advance(p);
         if (left->type != NODE_IDENTIFIER) {
             // we should be looking at an identifier when assigning
             p->errors++;
@@ -354,7 +358,7 @@ ASTNode* parse_assignment(Parser* p) {
         // do a recursive call for right associativity of assignments
         ASTNode* value = parse_assignment(p);
 
-        ASTNode* assign = create_assign(left->identifier, value);
+        ASTNode* assign = create_assign(left->identifier, value, l_walrus->line);
 
         // no longer need left node or its string data because it will be packed
         // into the assign node with value being what is being assigned
@@ -371,9 +375,9 @@ ASTNode* parse_logic_or(Parser* p) {
     ASTNode* left = parse_logic_and(p);
 
     while (match(p, OR)) {
-        advance(p);
+        Token* l_logor = advance(p);
         ASTNode* right = parse_logic_and(p);
-        left = create_bin_op(OR, left, right);
+        left = create_bin_op(OR, left, right, l_logor->line);
     }
     return left;
 }
@@ -382,9 +386,9 @@ ASTNode* parse_logic_and(Parser* p) {
     ASTNode* left = parse_equality(p);
 
     while (match(p, AND)) {
-        advance(p);
+        Token* l_logand = advance(p);
         ASTNode* right = parse_equality(p);
-        left = create_bin_op(AND, left, right);
+        left = create_bin_op(AND, left, right, l_logand->line);
     }
     return left;
 }
@@ -393,9 +397,10 @@ ASTNode* parse_equality(Parser* p) {
     ASTNode* left = parse_comparison(p);
 
     while (match(p, EQUAL) || match(p, BANG_EQUAL)) {
-        TokenType op = advance(p)->type;
+        Token* l_op = advance(p);
+        TokenType op = l_op->type;
         ASTNode* right = parse_comparison(p);
-        left = create_bin_op(op, left, right);
+        left = create_bin_op(op, left, right, l_op->line);
     }
     return left;
 }
@@ -404,9 +409,10 @@ ASTNode* parse_comparison(Parser* p) {
     ASTNode* left = parse_additive(p);
 
     while (match(p, LESS) || match(p, LESS_EQUAL) || match(p, GREATER) || match(p, GREATER_EQUAL)) {
-        TokenType op = advance(p)->type;
+        Token* l_op = advance(p);
+        TokenType op = l_op->type;
         ASTNode* right = parse_additive(p);
-        left = create_bin_op(op, left, right);
+        left = create_bin_op(op, left, right, l_op->line);
     }
     return left;
 }
@@ -415,9 +421,10 @@ ASTNode* parse_additive(Parser* p) {
     ASTNode* left = parse_multiplicative(p);
 
     while (match(p, PLUS) || match(p, MINUS)) {
-        TokenType op = advance(p)->type;
+        Token* l_op = advance(p);
+        TokenType op = l_op->type;
         ASTNode* right = parse_multiplicative(p);
-        left = create_bin_op(op, left, right);
+        left = create_bin_op(op, left, right, l_op->line);
     }
     return left;
 }
@@ -427,9 +434,10 @@ ASTNode* parse_multiplicative(Parser* p) {
 
     while (match(p, STAR) || match(p, FSLASH) || match(p, MODULO)) {
         // get the current op that it is and then check right identifier
-        TokenType op = advance(p)->type;
+        Token* l_op = advance(p);
+        TokenType op = l_op->type;
         ASTNode* right = parse_primary(p);
-        left = create_bin_op(op, left, right);
+        left = create_bin_op(op, left, right, l_op->line);
     }
     return left;
 }
@@ -462,10 +470,10 @@ ASTNode* parse_primary(Parser* p) {
                     advance(p);
                 }
                 consume(p, RPAREN, "Expected ')' after arguments");
-                return create_func_call(name, args, arg_count);
+                return create_func_call(name, args, arg_count, tok->line);
             }
             // otherwise is just an identifier
-            return create_identifier(name);
+            return create_identifier(name, tok->line);
         }
         case INT_LITERAL:
         case FLOAT_LITERAL:
@@ -474,7 +482,7 @@ ASTNode* parse_primary(Parser* p) {
         case TRUE:
         case FALSE:
         case NULL_LITERAL: {
-            ASTNode* lit = create_literal(advance(p));
+            ASTNode* lit = create_literal(advance(p), tok->line);
             return lit;
         }
         case LPAREN: {
@@ -487,7 +495,7 @@ ASTNode* parse_primary(Parser* p) {
         case MINUS: {
             TokenType op = advance(p)->type;
             ASTNode* operand = parse_primary(p);
-            return create_unary_op(op, operand);
+            return create_unary_op(op, operand, tok->line);
         }
         default:
             p->errors++;
@@ -508,7 +516,7 @@ ASTNode* parse_type(Parser* p) {
         error_report(get_token_line(p), "Parser", "expected type specifier instead of: %s\n", tok_string(tok->type));
     }
 
-    advance(p);
-    return create_type(mut, tok->type);
+    advance(p); // consume the type
+    return create_type(mut, tok->type, tok->line);
 }
 

@@ -30,6 +30,7 @@ struct ASTNode {
 
     NodeType type;
     Token* token;
+    int line;
 
     union {
         // function declaration
@@ -102,24 +103,26 @@ struct ASTNode {
     };
 };
 
-ASTNode* create_func_call(const char* name, ASTNode** args, int arg_count);
-ASTNode* create_func_decl(ASTNode* return_type, const char* name, ASTNode** params, int param_count, ASTNode* body);
-ASTNode* create_block(ASTNode** statements, int count);
-ASTNode* create_bin_op(TokenType op, ASTNode* left, ASTNode* right);
-ASTNode* create_unary_op(TokenType op, ASTNode* operand);
-ASTNode* create_literal(Token* token);
-ASTNode* create_identifier(const char* name);
-ASTNode* create_type(bool mut, TokenType type);
-ASTNode* create_param(ASTNode* type, const char* name);
-ASTNode* create_return(ASTNode* expr);
-ASTNode* create_print(ASTNode* expr);
-ASTNode* create_if(ASTNode* cond, ASTNode* then_block, ASTNode* else_block);
-ASTNode* create_for(ASTNode* init, ASTNode* end, ASTNode* iter, ASTNode* body);
-ASTNode* create_var_decl(ASTNode* type, const char* name, ASTNode* init);
+ASTNode* create_func_call(const char* name, ASTNode** args, int arg_count, int line);
+ASTNode* create_func_decl(ASTNode* return_type, const char* name, ASTNode** params, int param_count, ASTNode* body, int line);
+ASTNode* create_block(ASTNode** statements, int count, int line);
+ASTNode* create_bin_op(TokenType op, ASTNode* left, ASTNode* right, int line);
+ASTNode* create_unary_op(TokenType op, ASTNode* operand, int line);
+ASTNode* create_literal(Token* token, int line);
+ASTNode* create_identifier(const char* name, int line);
+ASTNode* create_type(bool mut, TokenType type, int line);
+ASTNode* create_param(ASTNode* type, const char* name, int line);
+ASTNode* create_return(ASTNode* expr, int line);
+ASTNode* create_print(ASTNode* expr, int line);
+ASTNode* create_if(ASTNode* cond, ASTNode* then_block, ASTNode* else_block, int line);
+ASTNode* create_for(ASTNode* init, ASTNode* end, ASTNode* iter, ASTNode* body, int line);
+ASTNode* create_var_decl(ASTNode* type, const char* name, ASTNode* init, int line);
+ASTNode* create_assign(const char* name, ASTNode* value, int line);
+ASTNode* create_while(ASTNode* cond, ASTNode* body, int line);
+ASTNode* create_break(int line);
+ASTNode* create_continue(int line);
 
 void print_ast(ASTNode* node, int indent);
 void free_ast(ASTNode* node);
 
-ASTNode* create_assign(const char* name, ASTNode* value);
-ASTNode* create_while(ASTNode* cond, ASTNode* body);
 #endif
