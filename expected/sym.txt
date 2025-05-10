@@ -1,0 +1,89 @@
+Generated AST:
+Block (7 statements):
+  Variable Declaration:
+    Name: x
+    Type:
+      Primitive: u8
+    Initial Value:
+      Integer Literal: 10
+  Variable Declaration:
+    Name: y
+    Type:
+      Primitive: u8
+    Initial Value:
+      Integer Literal: 5
+  Block (2 statements):
+    Variable Declaration:
+      Name: y
+      Type:
+        Primitive: u8
+      Initial Value:
+        Integer Literal: 7
+    Print Statement:
+      Identifier: y
+  Print Statement:
+    Identifier: y
+  Function: SUM
+    Return Type:
+      Parameter: result
+      Type:
+        Primitive: u8
+    Parameters (2):
+      Parameter: a
+      Type:
+        Primitive: u8
+      Parameter: b
+      Type:
+        Primitive: u8
+    Body:
+      Block (1 statements):
+        Variable Assignment:
+          Name: result
+          New Value:
+            Binary Operation: +
+              Identifier: a
+              Identifier: b
+  Function: Valid
+    Return Type:
+      Parameter: out
+      Type:
+        Primitive: u8
+    Parameters (1):
+      Parameter: x
+      Type:
+        Primitive: u8
+    Body:
+      Block (2 statements):
+        Variable Assignment:
+          Name: y
+          New Value:
+            Binary Operation: +
+              Identifier: x
+              Integer Literal: 1
+        Variable Assignment:
+          Name: out
+          New Value:
+            Identifier: y
+  For Loop:
+    Initialization:
+      Variable Declaration:
+        Name: i
+        Type:
+          Primitive: mut u8
+        Initial Value:
+          Integer Literal: 0
+    End Condition:
+      Binary Operation: <
+        Identifier: i
+        Integer Literal: 3
+    Iteration:
+      Variable Assignment:
+        Name: i
+        New Value:
+          Binary Operation: +
+            Identifier: i
+            Integer Literal: 1
+    Body:
+      Block (1 statements):
+        Print Statement:
+          Identifier: i

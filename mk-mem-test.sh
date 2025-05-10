@@ -1,5 +1,8 @@
 #!/bin/zsh
 
-make clean && make && leaks --atExit -- ./a.out tests/readme_sample_code.sn
-#make clean && make && leaks --atExit -- ./a.out tests/declarations_assignments.sn
-#make clean && make && leaks --atExit -- ./a.out tests/control_flow.sn
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <arg>"
+    exit 1
+fi
+
+make clean && make && leaks --atExit -- ./a.out "$1"

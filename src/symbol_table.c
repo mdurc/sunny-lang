@@ -1,5 +1,4 @@
 #include "symbol_table.h"
-#include "util.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -23,6 +22,16 @@ void symtab_destroy(SymbolTable* st) {
     }
     // free the table
     free(st);
+}
+
+void symtab_destroy_all(SymbolTable* st) {
+    if (st == NULL) return;
+    SymbolTable* next;
+    while (st != NULL) {
+        next = st->parent;
+        symtab_destroy(st);
+        st = next;
+    }
 }
 
 // Caller will have to explicitly check for null and throw exception

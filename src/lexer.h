@@ -17,6 +17,8 @@ typedef enum {
     FOR,            // for
     WHILE,          // while
     PRINT,          // print
+    BREAK,          // break
+    CONTINUE,       // continue
     RETURN,         // return
     RETURNS,        // returns
     MUT,            // mut

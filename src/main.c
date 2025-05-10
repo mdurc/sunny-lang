@@ -16,7 +16,6 @@ int main(int argc, char** argv){
         exit(EXIT_FAILURE);
     }
 
-    printf("\n");
     Token** tokens = NULL;
     int token_count = 0;
     int capacity = 0;
@@ -29,6 +28,7 @@ int main(int argc, char** argv){
     printf("Generated AST:\n");
     print_ast(ast, 0);
 
+    symtab_destroy_all(parser->symtab);
     free_ast(ast);
     for (int i = 0; i < token_count; i++) {
         free_token_data(tokens[i]);

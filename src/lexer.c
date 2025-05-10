@@ -6,7 +6,7 @@
 
 Category type_category(TokenType type) {
     switch (type) {
-        case FUNC: case AND: case MUT:
+        case FUNC: case AND: case MUT: case BREAK: case CONTINUE:
         case OR: case IF: case ELSE: case FOR:
         case WHILE: case PRINT: case RETURN: case RETURNS:
             return Keyword;
@@ -50,6 +50,8 @@ const char* tok_string(TokenType type) {
         case FOR:           return "for";
         case WHILE:         return "while";
         case PRINT:         return "print";
+        case BREAK:         return "break";
+        case CONTINUE:      return "continue";
         case RETURN:        return "return";
         case RETURNS:       return "returns";
         case MUT:           return "mut";

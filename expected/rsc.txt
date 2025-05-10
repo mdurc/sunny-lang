@@ -1,4 +1,3 @@
-
 Generated AST:
 Block (10 statements):
   Variable Declaration:

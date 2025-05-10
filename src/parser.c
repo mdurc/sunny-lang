@@ -39,6 +39,7 @@ Parser* parser_init(Token** tokens, int count) {
     p->pos = 0;
     p->size = count;
     p->symtab = symtab_create(NULL); // create the global scope symbol table
+    p->loop_depth = 0;
     return p;
 }
 
@@ -170,6 +171,18 @@ ASTNode* parse_block(Parser* p, bool create_scope) {
 }
 
 ASTNode* parse_statement(Parser* p) {
+    if (match(p, BREAK) || match(p, CONTINUE)) {
+        if (p->loop_depth == 0) {
+            throw_fatal_error(get_token_line(p), "Parser", "break/continue outside loop");
+        }
+
+        ASTNode* stmt = malloc(sizeof(ASTNode));
+        stmt->type = match(p, BREAK) ? NODE_BREAK : NODE_CONTINUE;
+        advance(p);
+        consume(p, SEMICOLON, "Expected ';' after break/continue");
+        return stmt;
+    }
+
     // check keywords
     if (match(p, RETURN)) {
         advance(p);
@@ -208,7 +221,11 @@ ASTNode* parse_statement(Parser* p) {
         consume(p, LPAREN, "Expected '(' after while");
         ASTNode* cond = parse_expression(p);
         consume(p, RPAREN, "Expected ')' after while");
+
+        p->loop_depth++;
         ASTNode* body = parse_block(p, true);
+        p->loop_depth--;
+
         return create_while(cond, body);
     }
 
@@ -242,7 +259,9 @@ ASTNode* parse_statement(Parser* p) {
 
         // the loop body has its own scope though note that the initialization
         // vars will still be accessible from the parent scope in the block {}
+        p->loop_depth++;
         ASTNode* body = parse_block(p, true);
+        p->loop_depth--;
 
         symtab_exit_scope(&p->symtab); // exit loop init scope
         return create_for(init, end, iter, body);
@@ -266,23 +285,45 @@ ASTNode* parse_statement(Parser* p) {
 
 ASTNode* parse_var_decl(Parser* p) {
     ASTNode* type = parse_type(p);
-    Token* name_tok = current(p);
-    consume(p, IDENTIFIER, "Expected variable name");
+    ASTNode** decls = NULL;
+    int count = 0;
+    bool first = true;
+    do {
+        if (!first) {
+            advance(p); // consume the comma
+            // copy the type into a new type node for this new declaration
+            type = create_type(type->primitive.mut, type->primitive.type_spec);
+        }
+        first = false;
 
-    Symbol* sym = symtab_insert(p->symtab, name_tok->data.lexeme, SYM_VARIABLE, type, NULL, type->primitive.mut);
-    if (sym == NULL) {
-        // duplicate declaration
-        throw_fatal_error(name_tok->line, "Parser", "duplicate variable declaration (%s)\n", name_tok->data.lexeme);
-    }
+        Token* name_tok = current(p);
+        consume(p, IDENTIFIER, "Expected variable name");
 
-    ASTNode* init = NULL;
-    if (match(p, WALRUS)) {
-        advance(p);
-        init = parse_expression(p);
-    }
+        Symbol* sym = symtab_insert(p->symtab, name_tok->data.lexeme, SYM_VARIABLE, type, NULL, type->primitive.mut);
+        if (sym == NULL) {
+            throw_fatal_error(name_tok->line, "Parser", "duplicate variable declaration (%s)\n", name_tok->data.lexeme);
+        }
+
+        ASTNode* init = NULL;
+        if (match(p, WALRUS)) {
+            advance(p);
+            init = parse_expression(p);
+        }
+
+        ASTNode* decl = create_var_decl(type, name_tok->data.lexeme, init);
+        decls = realloc(decls, ++count * sizeof(ASTNode*));
+        decls[count-1] = decl;
+    } while (match(p, COMMA));
 
     consume(p, SEMICOLON, "Expected ';' after variable declaration");
-    return create_var_decl(type, name_tok->data.lexeme, init);
+
+    if (count == 1) {
+        ASTNode* single_var = decls[0];
+        free(decls);
+        return single_var;
+    }
+    // if we have multiple declarations on this line, then return it as a block of declarations
+    return create_block(decls, count);
 }
 
 ASTNode* parse_expression(Parser* p) {

@@ -2,19 +2,10 @@
 - [ ] Multi-line comments /\* \*/
 - [ ] Tree sitter highlighting
 - [ ] Add pointers
-- [ ] Add break statements
+- [x] Add break/continue statements
 - [ ] Add std lib (memory allocation and memory management, printing to screen)
 - [ ] Type checker
-- [ ] Symbol table
+- [x] Symbol table
 - [ ] IR generation
 - [ ] Optimizations
-- [ ] Synchronize function for handling multiple parsing errors instead of crashing on the first one
-```
-#define PARSE_OR_BAIL(fn_call) \
-    ({ \
-        ASTNode* _result = (fn_call); \
-        if (p->panic_mode) return NULL; \
-        _result; \
-    })
-```
-
+- [ ] Implement panic mode recovery for multiple error reporting without cascading

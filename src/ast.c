@@ -1,4 +1,5 @@
 #include "ast.h"
+#include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -152,6 +153,7 @@ ASTNode* create_literal(Token* token) {
             break;
         case TRUE:
             node->literal.i = 1;
+            break;
         case FALSE:
         case NULL_LITERAL:
             node->literal.i = 0;
@@ -220,6 +222,12 @@ void print_ast(ASTNode* node, int indent) {
             printf("Parameter: %s\n", node->param.name);
             printf("%*sType:\n", indent*2, "");
             print_ast(node->param.type, indent+1);
+            break;
+        case NODE_BREAK:
+            printf("Break Statement\n");
+            break;
+        case NODE_CONTINUE:
+            printf("Continue Statement\n");
             break;
         case NODE_RETURN:
             printf("Return Statement:\n");
@@ -374,12 +382,14 @@ void free_ast(ASTNode* node) {
             free(node->identifier);
             break;
 
+        case NODE_BREAK:
+        case NODE_CONTINUE:
         case NODE_PRIMITIVE:
             // No dynamic memory to free for ints, bools, or floats
             break;
 
         default:
-            fprintf(stderr, "Warning: Unknown node type %d in free_ast\n", node->type);
+            throw_warning(-1, "AST", "Warning: Unknown node type %d in free_ast\n", node->type);
             break;
     }
 

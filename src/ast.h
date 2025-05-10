@@ -11,6 +11,8 @@ typedef enum {
     NODE_PARAM,
     NODE_BLOCK,
     NODE_RETURN,
+    NODE_BREAK,
+    NODE_CONTINUE,
     NODE_PRINT,
     NODE_IF,
     NODE_WHILE,

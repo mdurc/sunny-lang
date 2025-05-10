@@ -1,6 +1,5 @@
-
 Generated AST:
-Block (6 statements):
+Block (8 statements):
   Variable Declaration:
     Name: x
     Type:
@@ -80,3 +79,53 @@ Block (6 statements):
       Block (1 statements):
         Print Statement:
           Identifier: i
+  Block (1 statements):
+    Print Statement:
+      String Literal: "this is an empty scope"
+  For Loop:
+    Initialization:
+      Variable Declaration:
+        Name: i
+        Type:
+          Primitive: u8
+        Initial Value:
+          Integer Literal: 0
+    End Condition:
+      Binary Operation: <
+        Identifier: i
+        Integer Literal: 10
+    Iteration:
+      Variable Assignment:
+        Name: i
+        New Value:
+          Binary Operation: +
+            Identifier: i
+            Integer Literal: 1
+    Body:
+      Block (2 statements):
+        If Statement:
+          Condition:
+            Binary Operation: =
+              Identifier: i
+              Integer Literal: 5
+          Then Block:
+            Block (1 statements):
+              Break Statement
+          Else Block:
+            Block (1 statements):
+              If Statement:
+                Condition:
+                  Binary Operation: =
+                    Binary Operation: %
+                      Identifier: i
+                      Integer Literal: 2
+                    Integer Literal: 0
+                Then Block:
+                  Block (1 statements):
+                    Continue Statement
+        Variable Declaration:
+          Name: new_var
+          Type:
+            Primitive: u8
+          Initial Value:
+            Integer Literal: 3
