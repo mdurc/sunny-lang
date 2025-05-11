@@ -28,6 +28,14 @@ int main(int argc, char** argv){
 
     if (parser->errors > 0) {
         fprintf(stderr, "Compilation failed with %d errors and %d warnings.\n", parser->errors, parser->warnings);
+        symtab_destroy_all(parser->symtab);
+        free_ast(ast);
+        for (int i = 0; i < token_count; i++) {
+            free_token_data(tokens[i]);
+            free(tokens[i]);
+        }
+        free(tokens);
+        free(parser);
         exit(EXIT_FAILURE);
     }
 

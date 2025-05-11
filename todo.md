@@ -3,9 +3,11 @@
 - [ ] Tree sitter highlighting
 - [ ] Add pointers
 - [x] Add break/continue statements
-- [ ] Add std lib (memory allocation and memory management, printing to screen)
+- [ ] Add std lib (memory allocation and memory management, arrays/lists, enums, structs)
 - [ ] Type checker
 - [x] Symbol table
 - [ ] IR generation
 - [ ] Optimizations
-- [ ] Implement panic mode recovery for multiple error reporting without cascading
+- [x] Implement panic mode recovery for multiple error reporting without cascading
+    - [x] Fully handles memory management and scope management despite the program terminating if any errors are found. I believe this is good to have in general, though it certainly complicates the code and if we disregarded dynamic memory, the code would be much cleaner and simpler. Good news is that it will be very easy to get rid of freeing all the memory, but not so easy to implement it if I hadn't already.
+- [ ] Add NULL checks on all 'realloc' and 'malloc' and handle appropriately (particularly with all of the create_* calls in the parser)

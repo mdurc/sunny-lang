@@ -1,0 +1,33 @@
+// === Test Case with Errors ===
+
+// valid
+mut u8 foo := 4;
+
+u8 bar = 8;             // ERROR: expected ';' at end of declaration (= is not :=)
+
+// missing semicolon
+f64 my_float            // ERROR: Expected ';' after declaration
+
+// invalid string assignment
+String str = "test";    // ERROR: expected ';' at end of declaration (= is not :=)
+
+// invalid function declaration
+func ADD (x: u8 y: u8) returns (u8) { // ERROR: Missing comma and variable name in return type
+    z := x + y // ERROR: Missing ';' after expression
+}
+
+// invalid control structure
+if x < 5 {              // ERROR: Missing '('
+    print "test";
+else                    // ERROR: Unexpected 'else' without '}'
+}
+
+// malformed for-loop
+for (u8 i := 0 i < 5; i := i+1) { // ERROR: Missing ';' in init clause
+    print i;
+}
+
+// invalid scope
+{                       // Valid
+    print "valid scope";
+                       // Missing closing brace (parser should recover at EOF)

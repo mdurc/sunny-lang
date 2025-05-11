@@ -9,6 +9,7 @@ ASTNode* create_func_decl(ASTNode* return_type, const char* name,
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_FUNC_DECL;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     node->func_decl.return_type = return_type;
     node->func_decl.name = strdup(name);
     node->func_decl.params = params;
@@ -21,6 +22,7 @@ ASTNode* create_func_call(const char* name, ASTNode** args, int arg_count, int l
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_FUNC_CALL;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     // reuse func_decl space
     node->func_decl.name = strdup(name);
     node->func_decl.params = args;
@@ -32,6 +34,7 @@ ASTNode* create_identifier(const char* name, int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_IDENTIFIER;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     node->identifier = strdup(name);
     return node;
 }
@@ -40,6 +43,7 @@ ASTNode* create_type(bool mut, TokenType type, int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_PRIMITIVE;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     node->primitive.mut = mut;
     node->primitive.type_spec = type;
     return node;
@@ -49,6 +53,7 @@ ASTNode* create_param(ASTNode* type, const char* name, int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_PARAM;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     node->param.type = type;
     node->param.name = strdup(name);
     return node;
@@ -58,6 +63,7 @@ ASTNode* create_block(ASTNode** statements, int count, int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_BLOCK;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     node->block.statements = statements;
     node->block.stmt_count = count;
     return node;
@@ -67,6 +73,7 @@ ASTNode* create_print(ASTNode* expr, int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_PRINT;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     node->unary_op.operand = expr;
     return node;
 }
@@ -75,6 +82,7 @@ ASTNode* create_if(ASTNode* cond, ASTNode* then_block, ASTNode* else_block, int 
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_IF;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     node->if_stmt.cond = cond;
     node->if_stmt.then_block = then_block;
     node->if_stmt.else_block = else_block;
@@ -85,6 +93,7 @@ ASTNode* create_while(ASTNode* cond, ASTNode* body, int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_WHILE;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     // reuse if_stmt but only with condition and body
     node->if_stmt.cond = cond;
     node->if_stmt.then_block = body;
@@ -95,6 +104,7 @@ ASTNode* create_for(ASTNode* init, ASTNode* end, ASTNode* iter, ASTNode* body, i
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_FOR;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     node->for_stmt.init_expr = init;
     node->for_stmt.end_expr = end;
     node->for_stmt.iter_expr = iter;
@@ -106,6 +116,7 @@ ASTNode* create_var_decl(ASTNode* type, const char* name, ASTNode* init, int lin
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_VAR_DECL;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     node->var_decl.var_type = type;
     node->var_decl.name = strdup(name);
     node->var_decl.init_value = init;
@@ -116,6 +127,7 @@ ASTNode* create_assign(const char* name, ASTNode* value, int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_ASSIGN;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     // reuse var_decl but without type
     node->var_decl.name = strdup(name);
     node->var_decl.init_value = value;
@@ -126,6 +138,7 @@ ASTNode* create_bin_op(TokenType op, ASTNode* left, ASTNode* right, int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_BIN_OP;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     node->bin_op.op = op;
     node->bin_op.left = left;
     node->bin_op.right = right;
@@ -136,6 +149,7 @@ ASTNode* create_unary_op(TokenType op, ASTNode* operand, int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_UNARY_OP;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     node->unary_op.op = op;
     node->unary_op.operand = operand;
     return node;
@@ -146,6 +160,7 @@ ASTNode* create_return(ASTNode* expr, int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_RETURN;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     node->unary_op.operand = expr;
     return node;
 }
@@ -154,6 +169,7 @@ ASTNode* create_literal(Token* token, int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_LITERAL;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     node->token = token;
 
     switch(token->type) {
@@ -185,6 +201,7 @@ ASTNode* create_break(int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_BREAK;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     return node;
 }
 
@@ -192,6 +209,7 @@ ASTNode* create_continue(int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_CONTINUE;
     node->line = line;
+    node->resolved_type = NO_TYPE;
     return node;
 }
 
@@ -250,8 +268,8 @@ void print_ast(ASTNode* node, int indent) {
             break;
         case NODE_PARAM:
             printf("Parameter: %s at line %d\n", node->param.name, node->line);
-            printf("%*sType:\n", indent*2, "");
-            print_ast(node->param.type, indent+1);
+            printf("%*sType:\n", (indent+1)*2, "");
+            print_ast(node->param.type, indent+2);
             break;
         case NODE_BREAK:
             printf("Break Statement at line %d\n", node->line);

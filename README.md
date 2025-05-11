@@ -11,7 +11,12 @@
 
 ## Language Features
 - [ ] Strongly typed (with type-checking) & compiled
+    - Parser adds declared symbols, manages scopes, and asserts that only one declaration (function or variable) appears per identifier.
+    - Type checker resolves references, validates assignments and operations on resolved types.
+        - Handles context-sensitive rules (location of break/continue/return statements, and forward references)
 - [x] No main function entrypoint is required. Expressions outside of functions are evaluated from top to bottom.
+- [ ] Panic mode recovery for parsing errors: multiple error reporting without cascading
+    - Has full memory management and freeing all dynamic memory upon any errors. (Complicates the code but can be removed and simplified very easily)
 - [ ] Isolated String expressions are automatically printed to stdout
 - [ ] Structs but no classes
 - [ ] Enums associated to integers

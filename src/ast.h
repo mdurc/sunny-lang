@@ -31,6 +31,7 @@ struct ASTNode {
     NodeType type;
     Token* token;
     int line;
+    TokenType resolved_type; // changed by type checker after AST construction
 
     union {
         // function declaration

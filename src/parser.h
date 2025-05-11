@@ -11,14 +11,18 @@ typedef struct {
     int size;
     SymbolTable* symtab;
 
-    int loop_depth;
+    bool panic_mode;
     int errors;
     int warnings;
+    int last_line;
 } Parser;
 
 Parser* parser_init(Token** tokens, int count);
 ASTNode* parse_program(Parser* parser);
 ASTNode* parse_function(Parser* parser);
+ASTNode* parse_func_call(Parser* p, const char* name, int line);
+ASTNode* parse_if(Parser* p);
+ASTNode* parse_for(Parser* p);
 ASTNode* parse_statement(Parser* parser);
 ASTNode* parse_var_decl(Parser* p);
 ASTNode* parse_expression(Parser* parser);
