@@ -1,8 +1,8 @@
 u8 d := 0;
 u8 e := 123;
-u8 f := -987; // unary operation (not a negative literal)
+i8 f := -987; // unary operation (not a negative literal)
 u8 p := 9 - 3; // binary operation
-u8 o := -p;
+i8 o := -p;
 
 String a_b := "abc";
 String _bc := a_b;
@@ -13,11 +13,11 @@ f64 h := -0.001;
 // Different integer literal formats:
 
 u8 i := 0x1F; // 31 decimal
-u8 j := 0XABCDEF; // 11259375 decimal
+u32 j := 0XABCDEF; // 11259375 decimal
 u8 k := 0b1010; // 10 decimal
 u8 l := 0B1101; // 13 decimal
-u8 m := -42;
-u8 n := -0xFF; // 255 decimal
+i8 m := -42;
+i8 n := -0xFF; // 255 decimal
 
 
 // mutable variable declaration and assignment

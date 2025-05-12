@@ -4,97 +4,69 @@
 #include <limits.h>
 #include <stdint.h>
 
-Category type_category(TokenType type) {
-    switch (type) {
-        case FUNC: case AND: case MUT: case BREAK: case CONTINUE:
-        case OR: case IF: case ELSE: case FOR:
-        case WHILE: case PRINT: case RETURN: case RETURNS:
-            return Keyword;
-
-        case IDENTIFIER:
-            return Identifier;
-
-        case U0_TYPE: case U8_TYPE: case U16_TYPE: case U32_TYPE:
-        case U64_TYPE: case I8_TYPE: case I16_TYPE: case I32_TYPE:
-        case I64_TYPE: case F64_TYPE: case BOOL_TYPE: case STRING_TYPE:
-            return Primitive_type;
-
-        case TRUE: case FALSE: case CHAR_LITERAL: case NULL_LITERAL:
-        case INT_LITERAL: case STRING_LITERAL: case FLOAT_LITERAL:
-            return Literal;
-
-        case LPAREN: case RPAREN: case LBRACE: case RBRACE:
-        case LBRACKET: case RBRACKET: case COLON: case SEMICOLON:
-        case COMMA: case TILDE:
-            return Punct;
-
-        case BANG: case PLUS: case MINUS: case FSLASH: case STAR:
-        case EQUAL: case MODULO: case WALRUS: case BANG_EQUAL:
-        case LESS: case LESS_EQUAL: case GREATER: case GREATER_EQUAL:
-            return Operator;
-
-        case NO_TYPE:
-            return Keyword;
-    }
-    return Keyword;
-}
-
 const char* tok_string(TokenType type) {
     switch (type) {
         // keywords
         case FUNC:          return "func";
-        case AND:           return "and";
-        case OR:            return "or";
+        case MUT:           return "mut";
         case IF:            return "if";
         case ELSE:          return "else";
         case FOR:           return "for";
         case WHILE:         return "while";
         case PRINT:         return "print";
-        case BREAK:         return "break";
-        case CONTINUE:      return "continue";
         case RETURN:        return "return";
         case RETURNS:       return "returns";
-        case MUT:           return "mut";
-        case NULL_LITERAL:  return "null";
+        case BREAK:         return "break";
+        case CONTINUE:      return "continue";
         case TRUE:          return "true";
         case FALSE:         return "false";
+        case NULL_:         return "null";
+        case AND:           return "and";
+        case OR:            return "or";
+        case IDENTIFIER:    return "_identifier_";
 
-                            // primitive types
-        case U0_TYPE:       return "u0";
-        case U8_TYPE:       return "u8";
-        case U16_TYPE:      return "u16";
-        case U32_TYPE:      return "u32";
-        case U64_TYPE:      return "u64";
-        case I8_TYPE:       return "i8";
-        case I16_TYPE:      return "i16";
-        case I32_TYPE:      return "i32";
-        case I64_TYPE:      return "i64";
-        case F64_TYPE:      return "f64";
-        case BOOL_TYPE:     return "bool";
-        case STRING_TYPE:   return "String";
+        // primitive types
+        case U0:            return "u0";
+        case U8:            return "u8";
+        case U16:           return "u16";
+        case U32:           return "u32";
+        case U64:           return "u64";
+        case I8:            return "i8";
+        case I16:           return "i16";
+        case I32:           return "i32";
+        case I64:           return "i64";
+        case F64:           return "f64";
+        case BOOL:          return "bool";
+        case STRING:        return "String";
 
-                            // syntax
+        // literals
+        case INT_LITERAL:   return "_int_literal_";
+        case FLOAT_LITERAL: return "_float_literal_";
+        case CHAR_LITERAL:  return "_char_literal_";
+        case STRING_LITERAL:return "_string_literal_";
+
+        // syntax
         case LPAREN:        return "(";
         case RPAREN:        return ")";
         case LBRACE:        return "{";
         case RBRACE:        return "}";
-        case LBRACKET:      return "[";
-        case RBRACKET:      return "]";
+        case LBRACK:        return "[";
+        case RBRACK:        return "]";
+        case COMMA:         return ",";
         case COLON:         return ":";
         case SEMICOLON:     return ";";
-        case COMMA:         return ",";
         case TILDE:         return "~";
 
-                            // operators
+        // operators
         case BANG:          return "!";
         case PLUS:          return "+";
         case MINUS:         return "-";
-        case FSLASH:        return "/";
+        case SLASH:        return "/";
         case STAR:          return "*";
         case EQUAL:         return "=";
         case MODULO:        return "%";
 
-                            // compound operators
+        // compound operators
         case WALRUS:        return ":=";
         case BANG_EQUAL:    return "!=";
         case LESS:          return "<";
@@ -102,55 +74,88 @@ const char* tok_string(TokenType type) {
         case GREATER:       return ">";
         case GREATER_EQUAL: return ">=";
 
-        // either an identifier or literal (besides true/false/null), as these are the two
-        // categories that are ommitted due to not being constant
+        case EOF_:          return "_EOF_";
         default:            return "UNKNOWN";
     }
 }
 
+typedef struct {
+    const char* keyword;
+    TokenType type;
+} KeywordEntry;
+
+static KeywordEntry keyword_map[] = {
+    {"func",    FUNC},
+    {"mut",     MUT},
+    {"if",      IF},
+    {"else",    ELSE},
+    {"for",     FOR},
+    {"while",   WHILE},
+    {"print",   PRINT},
+    {"return",  RETURN},
+    {"returns", RETURNS},
+    {"break",   BREAK},
+    {"continue",CONTINUE},
+    {"true", TRUE}, {"false", FALSE}, {"null", NULL_}, {"and", AND}, {"or", OR},
+    {"u0", U0}, {"u8", U8}, {"u16", U16}, {"u32", U32}, {"u64", U64},
+    {"i8", I8}, {"i16", I16}, {"i32", I32}, {"i64", I64}, {"f64", F64},
+    {"bool",    BOOL},
+    {"String",  STRING},
+};
+
+#define KEYWORD_COUNT (sizeof(keyword_map) / sizeof(keyword_map[0]))
+
 TokenType lookup_type(const char* str) {
-    for (int i = 0; i < NO_TYPE; ++i) {
-        TokenType type = (TokenType)i;
-        if (strcmp(str, tok_string(type)) == 0) {
-            return type;
+    for (int i = 0; i < (int) KEYWORD_COUNT; ++i) {
+        if (strcmp(str, keyword_map[i].keyword) == 0) {
+            return keyword_map[i].type;
         }
     }
-    return NO_TYPE;
+    return IDENTIFIER;
+}
+
+bool is_primitive(TokenType t) {
+    switch(t) {
+        case U0: case U8: case U16: case U32: case U64: case I8: case I16:
+        case I32: case I64: case F64: case BOOL: case STRING:
+            return true;
+        default: return false;
+    }
+}
+
+bool is_literal(TokenType t) {
+    switch(t) {
+        case INT_LITERAL:
+        case FLOAT_LITERAL:
+        case CHAR_LITERAL:
+        case STRING_LITERAL:
+            return true;
+        default: return false;
+    }
 }
 
 void free_token_data(Token* token) {
-    if ((token->category == Literal && token->type != STRING_LITERAL)
-        || token->category == Punct || token->category == Operator) return;
-    free(token->data.lexeme);
+    if (token->type == STRING_LITERAL) {
+        free(token->data.str_val);
+    }
+    free(token->start);
 }
 
-// Allocate a new Token and store lexeme in its char* segment.
-// Used for string literals, keywords, and identifiers (keywords and idents should be verified first)
 Token* create_lexeme_token(TokenType type, const char* lexeme, int line) {
     Token* t = malloc(sizeof(Token)); // memory passed to the caller
-    t->category = type_category(type);
     t->type = type;
     t->line = line;
 
-    int sz = strlen(lexeme);
-    if (type == STRING_LITERAL && lexeme[0] == '"' && lexeme[sz - 1] == '"') {
+    t->start = strdup(lexeme);
+    t->length = strlen(lexeme);
+
+    if (type == STRING_LITERAL && lexeme[0] == '"' && lexeme[t->length - 1] == '"') {
         // trim the quotation marks for the literal
-        t->data.lexeme = malloc(sz - 1);
+        t->data.str_val = malloc(t->length - 1);
         // move past " and copy up to and including end quote
-        strncpy(t->data.lexeme, lexeme + 1, sz - 1);
-        t->data.lexeme[sz - 2] = '\0'; // replace end quote with null byte
-    } else {
-        t->data.lexeme = strdup(lexeme);
+        strncpy(t->data.str_val, lexeme + 1, t->length - 1);
+        t->data.str_val[t->length - 2] = '\0'; // replace end quote with null byte
     }
-    return t;
-}
-
-// For tokens that store no data in the Token.data
-Token* create_no_data_token(TokenType type, int line) {
-    Token* t = malloc(sizeof(Token)); // memory passed to the caller
-    t->category = type_category(type);
-    t->type = type;
-    t->line = line;
     return t;
 }
 
@@ -194,18 +199,8 @@ void put_keyword_indentifier_token(Token*** tokens, int* token_count, int* token
     }
     lexeme[len] = '\0';
 
-    Token* t = NULL;
     TokenType type = lookup_type(lexeme);
-    if (type == NO_TYPE) {
-        type = IDENTIFIER;
-    }
-    if (type_category(type) == Literal) {
-        // it must be either null/true/false because
-        // int/float/string/char literals are not found in the lookup
-        t = create_no_data_token(type, line);
-    } else {
-        t = create_lexeme_token(type, lexeme, line);
-    }
+    Token* t = create_lexeme_token(type, lexeme, line);
     free(lexeme);
     add_token(tokens, token_count, token_capacity, t);
 }
@@ -300,9 +295,8 @@ Token* get_number_token(FILE* fp, char c, int line) {
         }
 
         Token* t = malloc(sizeof(Token));
-        t->category = Literal;
         t->type = INT_LITERAL;
-        t->data.int_t = u_val;
+        t->data.int_val = u_val;
         t->line = line;
         return t;
     } else {
@@ -316,9 +310,8 @@ Token* get_number_token(FILE* fp, char c, int line) {
         }
 
         Token* t = malloc(sizeof(Token));
-        t->category = Literal;
         t->type = FLOAT_LITERAL;
-        t->data.f64_value = f_val;
+        t->data.float_val = f_val;
         t->line = line;
         return t;
     }
@@ -382,9 +375,8 @@ Token* get_char_token(FILE* fp, int line) {
 
     Token* t = malloc(sizeof(Token));
     t->line = line;
-    t->category = Literal;
     t->type = CHAR_LITERAL;
-    t->data.int_t = char_content;
+    t->data.int_val = char_content;
     return t;
 }
 
@@ -423,26 +415,43 @@ void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
         }
 
         switch (c) {
-            case '(': add_token(tokens, token_count, token_capacity, create_no_data_token(LPAREN, line)); break;
-            case ')': add_token(tokens, token_count, token_capacity, create_no_data_token(RPAREN, line)); break;
-            case '{': add_token(tokens, token_count, token_capacity, create_no_data_token(LBRACE, line)); break;
-            case '}': add_token(tokens, token_count, token_capacity, create_no_data_token(RBRACE, line)); break;
-            case '[': add_token(tokens, token_count, token_capacity, create_no_data_token(LBRACKET, line)); break;
-            case ']': add_token(tokens, token_count, token_capacity, create_no_data_token(RBRACKET, line)); break;
-            case ';': add_token(tokens, token_count, token_capacity, create_no_data_token(SEMICOLON, line)); break;
-            case ',': add_token(tokens, token_count, token_capacity, create_no_data_token(COMMA, line)); break;
-            case '~': add_token(tokens, token_count, token_capacity, create_no_data_token(TILDE, line)); break;
-            case '+': add_token(tokens, token_count, token_capacity, create_no_data_token(PLUS, line)); break;
-            case '-': add_token(tokens, token_count, token_capacity, create_no_data_token(MINUS, line)); break;
-            case '*': add_token(tokens, token_count, token_capacity, create_no_data_token(STAR, line)); break;
-            case '=': add_token(tokens, token_count, token_capacity, create_no_data_token(EQUAL, line)); break;
-            case '%': add_token(tokens, token_count, token_capacity, create_no_data_token(MODULO, line)); break;
+            case '(': add_token(tokens, token_count, token_capacity, create_lexeme_token(LPAREN, "(", line)); break;
+            case ')': add_token(tokens, token_count, token_capacity, create_lexeme_token(RPAREN, ")", line)); break;
+            case '{': add_token(tokens, token_count, token_capacity, create_lexeme_token(LBRACE, "{", line)); break;
+            case '}': add_token(tokens, token_count, token_capacity, create_lexeme_token(RBRACE, "}", line)); break;
+            case '[': add_token(tokens, token_count, token_capacity, create_lexeme_token(LBRACK, "[", line)); break;
+            case ']': add_token(tokens, token_count, token_capacity, create_lexeme_token(RBRACK, "]", line)); break;
+            case ';': add_token(tokens, token_count, token_capacity, create_lexeme_token(SEMICOLON, ";", line)); break;
+            case ',': add_token(tokens, token_count, token_capacity, create_lexeme_token(COMMA, ":", line)); break;
+            case '~': add_token(tokens, token_count, token_capacity, create_lexeme_token(TILDE, "~", line)); break;
+            case '+': add_token(tokens, token_count, token_capacity, create_lexeme_token(PLUS, "+", line)); break;
+            case '-': add_token(tokens, token_count, token_capacity, create_lexeme_token(MINUS, "-", line)); break;
+            case '*': add_token(tokens, token_count, token_capacity, create_lexeme_token(STAR, "*", line)); break;
+            case '=': add_token(tokens, token_count, token_capacity, create_lexeme_token(EQUAL, "=", line)); break;
+            case '%': add_token(tokens, token_count, token_capacity, create_lexeme_token(MODULO, "%", line)); break;
 
             // compounds operators
-            case ':': add_token(tokens, token_count, token_capacity, create_no_data_token(match_char(fp, '=') ? WALRUS : COLON, line)); break;
-            case '!': add_token(tokens, token_count, token_capacity, create_no_data_token(match_char(fp, '=') ? BANG_EQUAL : BANG, line)); break;
-            case '<': add_token(tokens, token_count, token_capacity, create_no_data_token(match_char(fp, '=') ? LESS_EQUAL : LESS, line)); break;
-            case '>': add_token(tokens, token_count, token_capacity, create_no_data_token(match_char(fp, '=') ? GREATER_EQUAL : GREATER, line)); break;
+            case ':': {
+                          bool match = match_char(fp, '=');
+                          add_token(tokens, token_count, token_capacity, create_lexeme_token(match ? WALRUS : COLON, match ? ":=" : ":", line));
+                          break;
+                      }
+            case '!': {
+                          bool match = match_char(fp, '=');
+                          add_token(tokens, token_count, token_capacity, create_lexeme_token(match ? BANG_EQUAL : BANG, match ? "!=" : "!", line));
+                          break;
+                      }
+            case '<': {
+                          bool match = match_char(fp, '=');
+                          add_token(tokens, token_count, token_capacity, create_lexeme_token(match ? LESS_EQUAL : LESS, match ? "<=" : "<", line));
+                          break;
+                      }
+            case '>': {
+                          bool match = match_char(fp, '=');
+                          add_token(tokens, token_count, token_capacity, create_lexeme_token(match ? GREATER_EQUAL : GREATER, match ? ">=" : ">", line));
+                          break;
+                      }
+
             case '\'': add_token(tokens, token_count, token_capacity, get_char_token(fp, line)); break;
             case '"': add_token(tokens, token_count, token_capacity, get_string_token(fp, c, line)); break;
 
@@ -454,7 +463,7 @@ void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
                       while ((c_int = getc(fp)) != EOF && (char)c_int != '\n');
                       ++line;
                   } else {
-                      add_token(tokens, token_count, token_capacity, create_no_data_token(FSLASH, line));
+                      add_token(tokens, token_count, token_capacity, create_lexeme_token(SLASH, "/", line));
                   }
                   break;
               }

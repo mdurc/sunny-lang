@@ -1,0 +1,22 @@
+func FOO() returns (x: mut u8) {
+    bool condition := true;
+    if (condition) {
+        x := 1;
+    } else {
+        x := 2;
+    }
+}
+
+func BAR() returns (x: mut u8) {
+    for (mut u8 i := 0; i < 10; i := i + 1){
+        x := i;
+    }
+    // loop is not necessarily entered, so this will error without the final assignment
+    x := 3;
+}
+
+
+func ADD() returns (x: u8) {
+    x := 33;
+    return 8;
+}

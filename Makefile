@@ -1,11 +1,13 @@
 CC = gcc
-CFLAGS = -Wall -Wextra
+CFLAGS = -Wall -Wextra -g
 PROGRAM = a.out
 
 SRC_DIR = ./src
 BUILD_DIR = ./build
 
-SRC_LIST = $(SRC_DIR)/lexer.c $(SRC_DIR)/main.c $(SRC_DIR)/parser.c $(SRC_DIR)/ast.c $(SRC_DIR)/error.c $(SRC_DIR)/symbol_table.c
+SRC_LIST = $(SRC_DIR)/lexer.c $(SRC_DIR)/main.c $(SRC_DIR)/parser.c \
+			$(SRC_DIR)/ast.c $(SRC_DIR)/error.c $(SRC_DIR)/symbol_table.c \
+			$(SRC_DIR)/type_checker.c
 OBJ_LIST = $(SRC_LIST:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
 
 all: $(PROGRAM)

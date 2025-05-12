@@ -1,4 +1,5 @@
 #include "symbol_table.h"
+#include "error.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -8,35 +9,36 @@ SymbolTable* symtab_create(SymbolTable* parent) {
     st->head = NULL;
     st->parent = parent;
     st->scope_depth = parent ? parent->scope_depth + 1 : 0;
+    st->children = NULL;
+    st->children_count = 0;
+    st->children_capacity = 0;
     return st;
 }
 
 void symtab_destroy(SymbolTable* st) {
     Symbol* current = st->head;
-    // free linked list within table
     while (current) {
         Symbol* next = current->next;
+        if (current->prev) current->prev->next = NULL; // no dangling pointers
+        current->prev = NULL;
         free(current->name);
         free(current);
         current = next;
     }
-    // free the table
+    free(st->children);
     free(st);
 }
 
-void symtab_destroy_all(SymbolTable* st) {
-    if (st == NULL) return;
-    SymbolTable* next;
-    while (st != NULL) {
-        next = st->parent;
-        symtab_destroy(st);
-        st = next;
+void symtab_destroy_all(SymbolTable* root) {
+    if (!root) return;
+    for (int i = 0; i < root->children_count; i++) {
+        symtab_destroy_all(root->children[i]);
     }
+    symtab_destroy(root);
 }
 
 // Caller will have to explicitly check for null and throw exception
-Symbol* symtab_insert(SymbolTable* st, const char* name, SymbolKind kind,
-                     ASTNode* type, ASTNode* decl_node, bool is_mutable) {
+Symbol* symtab_insert(SymbolTable* st, const char* name, ASTNode* ast_node, bool is_initialized) {
     // check for existing symbol in current scope
     if (symtab_lookup_current(st, name)) {
         return NULL;
@@ -44,10 +46,8 @@ Symbol* symtab_insert(SymbolTable* st, const char* name, SymbolKind kind,
 
     Symbol* sym = malloc(sizeof(Symbol));
     sym->name = strdup(name);
-    sym->kind = kind;
-    sym->type = type;
-    sym->decl_node = decl_node;
-    sym->is_mutable = is_mutable;
+    sym->ast_node = ast_node;
+    sym->is_initialized = is_initialized;
     sym->scope_depth = st->scope_depth;
 
     // prepend this new symbol to the front of linked list
@@ -68,6 +68,13 @@ Symbol* symtab_lookup(SymbolTable* st, const char* name) {
     while (current) {
         Symbol* sym = current->head;
         while (sym) {
+            if (sym == NULL) {
+                fatal_error(-1, "SymbolTable", "Null sym->name inserted");
+            } else if (sym->name == NULL) { // SEGFAULT ON THIS ACCESS
+                fatal_error(-1, "SymbolTable", "Null sym->name inserted");
+            } else if (name == NULL) {
+                fatal_error(-1, "SymbolTable", "Null name inserted");
+            }
             if (strcmp(sym->name, name) == 0) {
                 // move to front optimization
                 if (sym != current->head) {
@@ -94,6 +101,11 @@ Symbol* symtab_lookup(SymbolTable* st, const char* name) {
 Symbol* symtab_lookup_current(SymbolTable* st, const char* name) {
     Symbol* sym = st->head;
     while (sym) {
+        if (sym->name == NULL) {
+            fatal_error(-1, "SymbolTable", "Null sym->name inserted");
+        } else if (name == NULL) {
+            fatal_error(-1, "SymbolTable", "Null name inserted");
+        }
         if (strcmp(sym->name, name) == 0) {
             // move-to-front
             if (sym != st->head) {
@@ -114,16 +126,52 @@ Symbol* symtab_lookup_current(SymbolTable* st, const char* name) {
 
 // make a child scope from root then modify root to now point to that sub-scope
 void symtab_enter_new_scope(SymbolTable** root) {
-    SymbolTable* new_scope = symtab_create(*root);
+    SymbolTable* parent = *root;
+    SymbolTable* new_scope = symtab_create(parent);
+
+    if (parent) {
+        if (parent->children_count >= parent->children_capacity) {
+            parent->children_capacity = parent->children_capacity ?
+                parent->children_capacity * 2 : 4;
+            parent->children = realloc(parent->children,
+                parent->children_capacity * sizeof(SymbolTable*));
+        }
+        parent->children[parent->children_count++] = new_scope;
+    }
     *root = new_scope;
 }
 
 // modify root by bringing it to outer scope (if not outmost) and destroy inner scope
 void symtab_exit_scope(SymbolTable** root) {
     if (*root && (*root)->parent) {
-        SymbolTable* old = *root;
-        *root = old->parent;
-        symtab_destroy(old);
+        *root = (*root)->parent;
     }
 }
 
+void symtab_print(SymbolTable* st) {
+    printf("\nSymbol Table at Current and Parent Scopes:\n");
+    SymbolTable* current = st;
+    int count = 1;
+    while (current) {
+        printf("\tScope %d:\n", count++);
+        Symbol* sym = current->head;
+        while (sym) {
+            printf("\t\t%s\n", sym->name);
+            sym = sym->next;
+        }
+        current = current->parent;
+    }
+}
+
+void symtab_print_current(SymbolTable* st) {
+    printf("\nSymbol Table at Current Scope:\n");
+    if (st == NULL) {
+        printf("\tTable is a null pointer\n");
+        return;
+    }
+    Symbol* current = st->head;
+    while (current) {
+        printf("\t%s\n", current->name);
+        current = current->next;
+    }
+}

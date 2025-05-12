@@ -1,10 +1,8 @@
-
-#include "error.h"
 #include "lexer.h"
 #include "parser.h"
+#include "type_checker.h"
 #include <assert.h>
 #include <stdlib.h>
-//#include "code_gen.h"
 
 int main(int argc, char** argv){
     if (argc != 2){
@@ -25,6 +23,7 @@ int main(int argc, char** argv){
 
     Parser* parser = parser_init(tokens, token_count);
     ASTNode* ast = parse_program(parser);
+    typecheck_program(ast, parser);
 
     if (parser->errors > 0) {
         fprintf(stderr, "Compilation failed with %d errors and %d warnings.\n", parser->errors, parser->warnings);

@@ -22,7 +22,7 @@ for (i := 0; i < 5; i := i + 1) {
     print "this is an empty scope";
 }
 
-for (u8 i := 0 ; i < 10 ; i := i + 1) {
+for (mut u8 i := 0 ; i < 10 ; i := i + 1) {
     if (i = 5) {
         break;
     } else {

@@ -26,12 +26,22 @@ typedef enum {
 
 typedef struct ASTNode ASTNode;
 
+typedef struct SymbolTable SymbolTable;
+
 struct ASTNode {
 
-    NodeType type;
-    Token* token;
+    NodeType node_type;
+    TokenType token_type; // used for literals
     int line;
-    TokenType resolved_type; // changed by type checker after AST construction
+
+    // changed by type checker after AST construction
+    struct CheckedState {
+        TokenType token_type;
+        uint64_t i;
+        bool int_sign; // false is positive, true negative
+        double f;
+        char* s;
+    } resolved_state;
 
     union {
         // function declaration
@@ -41,12 +51,14 @@ struct ASTNode {
             ASTNode** params;
             int param_count;
             ASTNode* body;
+            SymbolTable* symtab; // the scope of the params, return, and body
         } func_decl;
 
         // content block
         struct {
             ASTNode** statements;
             int stmt_count;
+            SymbolTable* symtab;
         } block;
 
         // binary operation
@@ -72,10 +84,7 @@ struct ASTNode {
         char* identifier;
 
         // type
-        struct {
-            bool mut;
-            TokenType type_spec;
-        } primitive;
+        bool is_mut;
 
         // function parameter
         struct {
@@ -93,6 +102,7 @@ struct ASTNode {
             ASTNode *end_expr;
             ASTNode *iter_expr;
             ASTNode* body;
+            SymbolTable* symtab;
         } for_stmt;
 
         // variable declaration
@@ -105,8 +115,8 @@ struct ASTNode {
 };
 
 ASTNode* create_func_call(const char* name, ASTNode** args, int arg_count, int line);
-ASTNode* create_func_decl(ASTNode* return_type, const char* name, ASTNode** params, int param_count, ASTNode* body, int line);
-ASTNode* create_block(ASTNode** statements, int count, int line);
+ASTNode* create_func_decl(ASTNode* return_type, const char* name, ASTNode** params, int param_count, ASTNode* body, SymbolTable* symtab, int line);
+ASTNode* create_block(ASTNode** statements, int count, SymbolTable* symtab, int line);
 ASTNode* create_bin_op(TokenType op, ASTNode* left, ASTNode* right, int line);
 ASTNode* create_unary_op(TokenType op, ASTNode* operand, int line);
 ASTNode* create_literal(Token* token, int line);
@@ -116,7 +126,7 @@ ASTNode* create_param(ASTNode* type, const char* name, int line);
 ASTNode* create_return(ASTNode* expr, int line);
 ASTNode* create_print(ASTNode* expr, int line);
 ASTNode* create_if(ASTNode* cond, ASTNode* then_block, ASTNode* else_block, int line);
-ASTNode* create_for(ASTNode* init, ASTNode* end, ASTNode* iter, ASTNode* body, int line);
+ASTNode* create_for(ASTNode* init, ASTNode* end, ASTNode* iter, ASTNode* body, SymbolTable* symtab, int line);
 ASTNode* create_var_decl(ASTNode* type, const char* name, ASTNode* init, int line);
 ASTNode* create_assign(const char* name, ASTNode* value, int line);
 ASTNode* create_while(ASTNode* cond, ASTNode* body, int line);

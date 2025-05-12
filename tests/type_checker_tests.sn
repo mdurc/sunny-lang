@@ -1,0 +1,118 @@
+// Valid basic declarations
+mut u8 x := 0;
+u8 y := 255;          // Max u8 value
+bool condition := true;
+f64 pi := 3.14159;
+String hello := "world";
+u8 my_char := 'A';
+
+// Type mismatch tests (should all error)
+// mut u8 a := 3.14;             // Float to u8
+// bool b := 5;                 // Int to bool
+// u8 c := "string";            // String to u8
+// f64 d := true;               // Bool to float
+
+// Control flow tests
+if (x < y and condition) {
+    print "Valid comparison";
+} else {
+    // if (x = y or !5) {       // Invalid: non-bool in condition
+    //     print "Error";
+    // }
+}
+
+// Loop tests
+mut u8 i;
+for (i := 0; i < 5; i := i + 1) {
+    print i;
+    if (i % 2 = 0) {
+        continue;
+    }
+}
+
+// Block scope test
+{
+    u8 inner := 10;
+    print inner;
+}
+// inner := 5;                 // Error: out of scope
+
+// Function tests
+func ADD (a: u8, b: u8) returns (result: u8) {
+    result := a + b;
+    return result;             // Explicit return
+}
+
+func BAD_ADD (a: u8, b: u8) returns (result: u8) {
+    result := a - b;           // Potential underflow
+    // result := "error";      // Type mismatch
+}
+
+// Function call tests
+u8 sum := ADD(100, 200);
+// u8 bad_sum := ADD(500, 500); // Overflow test
+// ADD(true, false);           // Type mismatch
+
+// Assignment tests
+mut u8 foo := 42;
+foo := 255;                    // Valid
+// foo := 256;                 // Overflow
+// foo := -1;                  // Negative value
+
+// Type conversion tests
+mut f64 float_val := 3.14;
+// u8 int_val := float_val;    // Implicit conversion error
+
+// String operations
+String s1 := "Hello";
+String s2 := "World";
+// String s3 := s1 + 5;        // Invalid concatenation
+
+// Boolean logic tests
+bool b1 := true;
+bool b2 := false;
+bool b3 := b1 and b2;
+bool b4 := b1 or b2;
+// bool b5 := 1 and true;      // Type mismatch
+
+// Nested loops and breaks
+for (mut u8 j := 0; j < 10; j := j + 1) {
+    while (true) {
+        if (j = 5) {
+            break;
+        }
+        // break;              // Break outside loop error
+    }
+}
+
+// Shadowing test
+{
+    u8 shadow := 10;
+    {
+        u8 shadow := 20;       // Valid shadowing
+    }
+}
+
+// Void function test
+func LOG (message: String) {
+    print message;
+    // return "something";     // Invalid return
+}
+
+// Return type enforcement
+// func BAD_RETURN () returns (value: u8) {
+//     // No return statement    // Error: missing return
+// }
+
+// Literal type inference
+u8 max_u8 := 255;
+// u8 overflow := 256;         // Literal too large
+i8 negative := -128;
+// u8 negative_err := -1;      // Negative in unsigned
+
+// Modulo operations
+u8 mod_result := 10 % 3;
+// f64 float_mod := 5.5 % 2;  // Invalid float modulo
+
+// Character handling
+// u8 invalid_char := 'ab';    // Multi-character error

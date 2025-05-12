@@ -2,7 +2,7 @@
 mut u8 foo := 4;        // mutable declaration and initialization
 u8 bar := 8;            // immutable (cannot be reassigned)
 foo := bar;             // copy by value re-assignment
-f64 my_float;           // immutable float declaration
+f64 my_float := 3.14;           // immutable float declaration
 
 String str := "this is a string";
 bool my_bool := true;

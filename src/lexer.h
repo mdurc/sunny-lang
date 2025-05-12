@@ -9,62 +9,52 @@
 
 typedef enum {
     // keywords:
-    FUNC,           // func
-    AND,            // and
-    OR,             // or
-    IF,             // if
-    ELSE,           // else
-    FOR,            // for
-    WHILE,          // while
-    PRINT,          // print
-    BREAK,          // break
-    CONTINUE,       // continue
-    RETURN,         // return
-    RETURNS,        // returns
-    MUT,            // mut
+    FUNC,       // func
+    MUT,        // mut (mutable)
+    IF,         // if
+    ELSE,       // else
+    FOR,        // for
+    WHILE,      // while
+    PRINT,      // print
+    RETURN,     // return
+    RETURNS,    // returns
+    //STRUCT,     // struct
+    BREAK,      // break
+    CONTINUE,   // continue
+    TRUE,       // true
+    FALSE,      // false
+    NULL_,      // null
+    AND,        // and
+    OR,         // or
     IDENTIFIER,
 
     // primitive types:
-    U0_TYPE,        // u0 type
-    U8_TYPE,        // u8 type
-    U16_TYPE,       // u16 type
-    U32_TYPE,       // u32 type
-    U64_TYPE,       // u64 type
-    I8_TYPE,        // i8 type
-    I16_TYPE,       // i16 type
-    I32_TYPE,       // i32 type
-    I64_TYPE,       // i64 type
-    F64_TYPE,       // f64 type
+    // Unsigned
+    U8, U16, U32, U64,
+    // Signed
+    I8, I16, I32, I64,
+    // Floating
+    F64,
+    // Special
+    BOOL, STRING, U0,
 
-    BOOL_TYPE,      // bool will be mapped to i8 but will be forced to be 1/0
-    STRING_TYPE,    // String
-
-    // literals:
-    CHAR_LITERAL,   // 'a'
-    NULL_LITERAL,   // null (of type u0)
-    TRUE,           // true
-    FALSE,          // false
-    INT_LITERAL,    // 42, 0xFF, 0b1010
-    FLOAT_LITERAL,  // 3.14
+    // literals
+    INT_LITERAL,     // 42, 0x1F, 0b1010
+    FLOAT_LITERAL,   // 3.14, 2e5
+    CHAR_LITERAL,    // 'a'
     STRING_LITERAL, // "text"
 
     // syntax:
-    LPAREN,         // (
-    RPAREN,         // )
-    LBRACE,         // {
-    RBRACE,         // }
-    LBRACKET,       // [
-    RBRACKET,       // ]
-    COLON,          // :
-    SEMICOLON,      // ;
-    COMMA,          // ,
-    TILDE,          // ~
+    LPAREN, RPAREN,    // ()
+    LBRACE, RBRACE,    // {}
+    LBRACK, RBRACK,    // []
+    COMMA, COLON, SEMICOLON, TILDE,
 
     // operators:
     BANG,           // !
     PLUS,           // +
     MINUS,          // -
-    FSLASH,         // /
+    SLASH,          // /
     STAR,           // *
     EQUAL,          // =
     MODULO,         // %
@@ -77,36 +67,25 @@ typedef enum {
     GREATER,        // >
     GREATER_EQUAL,  // >=
 
-    NO_TYPE
+    EOF_
 } TokenType;
-
-typedef enum {
-    Keyword,
-    Identifier,
-    Primitive_type,
-    Literal,
-    Punct,
-    Operator
-} Category;
 
 typedef struct {
     TokenType type;
-    Category category;
+    char* start; // source text from program
+    int length; // length of lexeme string
     int line;
+
     union {
-        // integer (and char/bool/null) literal:
-        // for bool: 0 is false, non-zero is true
-        uint64_t int_t;
-
-        // float literal:
-        double f64_value;
-
-        // string literals, identifier names, keywords
-        char* lexeme;
+        uint64_t int_val;
+        double float_val;
+        char* str_val;
     } data;
 } Token;
 
 const char* tok_string(TokenType type);
+bool is_primitive(TokenType t);
+bool is_literal(TokenType t);
 bool match_char(FILE* fp, char c);
 void free_token_data(Token* token);
 Token* alloc_token_lexeme_data(TokenType type, const char* lexeme, int line);

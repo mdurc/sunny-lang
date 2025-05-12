@@ -149,7 +149,7 @@ ASTNode* parse_program(Parser* p) {
     }
 
     // root is the global content block
-    return create_block(root, count, -1);
+    return create_block(root, count, p->symtab, -1);
 }
 
 ASTNode* parse_function(Parser* p) {
@@ -174,7 +174,7 @@ ASTNode* parse_function(Parser* p) {
         }
         first_param = false;
         // iterate throgh all parameters and add them to the list of params
-        ASTNode* param; _parse_go(param, parse_param(p), err_free_func_params);
+        ASTNode* param; _parse_go(param, parse_param(p, true), err_free_func_params);
         params = realloc(params, ++param_count * sizeof(ASTNode*));
         params[param_count-1] = param;
 
@@ -188,29 +188,33 @@ ASTNode* parse_function(Parser* p) {
     if (match(p, RETURNS)) {
         advance(p);
         _consume_go(p, LPAREN, "Expected '('", err_free_func_params);
-        _parse_go(return_type, parse_param(p), err_free_func_params);
+        _parse_go(return_type, parse_param(p, false), err_free_func_params);
         _consume_go(p, RPAREN, "Expected ')'", err_free_func_ret);
     } else {
         // void return type is implicit when ommitting "returns" clause
-        return_type = create_type(false, U0_TYPE, l_func);
-    }
-
-    // add the function into the PARENT scope, not the current scope which is its own scope
-    Symbol* func_sym = symtab_insert(p->symtab->parent, name_tok->data.lexeme, SYM_FUNCTION, return_type, NULL, false);
-    if (func_sym == NULL) {
-        // duplicate declaration
-        p->panic_mode = true;
-        p->errors++;
-        error_report(name_tok->line, "Parser", "duplicate function declaration (%s)\n", name_tok->data.lexeme);
-        goto err_free_func_ret;
+        return_type = create_type(false, U0, l_func);
     }
 
     // do not create another scope in the body
     ASTNode* body; _parse_go(body, parse_block(p, false), err_free_func_ret);
 
+    ASTNode* this_func = create_func_decl(return_type,
+            name_tok->start, params, param_count, body, p->symtab, l_func);
+
+    // add the function into the current scope which is now the parent's scope because we just exitted.
+    Symbol* func_sym = symtab_insert(p->symtab->parent, name_tok->start, this_func, true);
+
+    if (func_sym == NULL) {
+        // duplicate declaration
+        p->panic_mode = true;
+        p->errors++;
+        error_report(name_tok->line, "Parser", "duplicate function declaration (%s)\n", name_tok->start);
+        goto err_free_func_ret;
+    }
+
     symtab_exit_scope(&p->symtab);
 
-    return create_func_decl(return_type, name_tok->data.lexeme, params, param_count, body, l_func);
+    return this_func;
 
 err_free_func_ret:
     free_ast(return_type);
@@ -222,7 +226,8 @@ err_exit_func_scope:
     return NULL;
 }
 
-ASTNode* parse_param(Parser* p) {
+// is_param should only be false if this is the "returns" parameters
+ASTNode* parse_param(Parser* p, bool is_param) {
     // my_param : u8
     if (!match(p, IDENTIFIER)) {
         p->panic_mode = true;
@@ -234,10 +239,11 @@ ASTNode* parse_param(Parser* p) {
     Token* name_tok = advance(p);
     _consume(p, COLON, "Expected ':'");
 
-    ASTNode* type; _parse(type, parse_type(p)); // returns null on failure
-    ASTNode* param = create_param(type, name_tok->data.lexeme, name_tok->line);
+    ASTNode* ast_type; _parse(ast_type, parse_type(p)); // returns null on failure
+    ASTNode* param = create_param(ast_type, name_tok->start, name_tok->line);
 
-    Symbol* param_sym = symtab_insert(p->symtab, param->param.name, SYM_PARAMETER, param->param.type, param, false);
+    // only is_param's are initialized, not "returns" parameters
+    Symbol* param_sym = symtab_insert(p->symtab, param->param.name, param, is_param);
     if (param_sym == NULL) {
         // duplicate declaration
         p->panic_mode = true;
@@ -278,11 +284,13 @@ ASTNode* parse_block(Parser* p, bool create_scope) {
 
     _consume_go(p, RBRACE, "Expected '}'", err_clean_statements);
 
+    ASTNode* this_block = create_block(stmts, count, p->symtab, l_block);
+
     if (create_scope) {
         symtab_exit_scope(&p->symtab);
     }
 
-    return create_block(stmts, count, l_block);
+    return this_block;
 
 err_clean_statements:
     for (int i = 0; i < count; ++i) { free_ast(stmts[i]); stmts[i] = NULL; }
@@ -328,7 +336,7 @@ ASTNode* parse_for(Parser* p) {
     symtab_enter_new_scope(&p->symtab); // new scope for init () and block {}
 
     ASTNode* init = NULL;
-    if (match(p, MUT) || (current(p)!=NULL && current(p)->category == Primitive_type)) {
+    if (match(p, MUT) || (current(p)!=NULL && is_primitive(current(p)->type))) {
         _parse_go(init, parse_var_decl(p), err_for_cleanup);
     } else if (match(p, IDENTIFIER)) {
         _parse_go(init, parse_expression(p), err_for_cleanup);
@@ -352,9 +360,12 @@ ASTNode* parse_for(Parser* p) {
     // the loop body has its own scope though note that the initialization
     // vars will still be accessible from the parent scope in the block {}
     ASTNode* body; _parse_go(body, parse_block(p, true), err_for_iter);
+
+    ASTNode* this_for = create_for(init, end, iter, body, p->symtab, l_for);
+
     symtab_exit_scope(&p->symtab); // exit loop init scope
 
-    return create_for(init, end, iter, body, l_for);
+    return this_for;
 
 err_for_iter:
     free_ast(iter);
@@ -438,7 +449,7 @@ ASTNode* parse_statement(Parser* p) {
     }
 
     // parse variable declaration (with possible initialization)
-    if (match(p, MUT) || (current(p)!=NULL && current(p)->category == Primitive_type)) {
+    if (match(p, MUT) || (current(p)!=NULL && is_primitive(current(p)->type))) {
         return parse_var_decl(p);
     }
 
@@ -454,10 +465,7 @@ ASTNode* parse_statement(Parser* p) {
 ASTNode* parse_var_decl(Parser* p) {
     int l_type = get_token_line(p);
 
-    ASTNode* type; _parse(type, parse_type(p));
-    if (type->type != NODE_PRIMITIVE) {
-        fatal_error(-1, "Parser", "WHATTTTT eheehehheheprimitive\n");
-    }
+    ASTNode* ast_type; _parse(ast_type, parse_type(p));
 
     ASTNode** decls = NULL;
     int count = 0;
@@ -468,23 +476,12 @@ ASTNode* parse_var_decl(Parser* p) {
             advance(p); // consume the comma that must exist after the loop condition
             // copy the type into a new type node for this new declaration
             // the type's line will always be constant
-            type = create_type(type->primitive.mut, type->primitive.type_spec, l_type);
-    if (type->type != NODE_PRIMITIVE) {
-        fatal_error(-1, "Parser", "Invalid eheehehheheprimitive\n");
-    }
+            ast_type = create_type(ast_type->is_mut, ast_type->token_type, l_type);
         }
         first = false;
 
         Token* name_tok = current(p);
         _consume_go(p, IDENTIFIER, "Expected variable name", err_decls);
-
-        Symbol* sym = symtab_insert(p->symtab, name_tok->data.lexeme, SYM_VARIABLE, type, NULL, type->primitive.mut);
-        if (sym == NULL) {
-            p->panic_mode = true;
-            p->errors++;
-            error_report(name_tok->line, "Parser", "duplicate variable declaration (%s)\n", name_tok->data.lexeme);
-            goto err_decls;
-        }
 
         ASTNode* init = NULL;
         if (match(p, WALRUS)) {
@@ -492,7 +489,18 @@ ASTNode* parse_var_decl(Parser* p) {
             _parse_go(init, parse_expression(p), err_decls);
         }
 
-        ASTNode* decl = create_var_decl(type, name_tok->data.lexeme, init, name_tok->line);
+        ASTNode* decl = create_var_decl(ast_type, name_tok->start, init, name_tok->line);
+
+        Symbol* sym = symtab_insert(p->symtab, name_tok->start, decl, init != NULL);
+        if (sym == NULL) {
+            p->panic_mode = true;
+            p->errors++;
+            error_report(name_tok->line, "Parser",
+                    "duplicate variable declaration (%s)\n",
+                    name_tok->start);
+            goto err_decls;
+        }
+
         decls = realloc(decls, ++count * sizeof(ASTNode*));
         decls[count-1] = decl;
     } while (match(p, COMMA));
@@ -504,8 +512,10 @@ ASTNode* parse_var_decl(Parser* p) {
         free(decls);
         return single_var;
     }
+
     // if we have multiple declarations on this line, then return it as a block of declarations
-    return create_block(decls, count, l_type);
+    // the scope will just be the same level scope as the current symtab
+    return create_block(decls, count, p->symtab, l_type);
 
 err_decls:
     for (int i = 0; i < count; i++) { free_ast(decls[i]); decls[i] = NULL; }
@@ -524,7 +534,7 @@ ASTNode* parse_assignment(Parser* p) {
 
     if (match(p, WALRUS)) {
         Token* l_walrus = advance(p);
-        if (left->type != NODE_IDENTIFIER) {
+        if (left->node_type != NODE_IDENTIFIER) {
             // we should be looking at an identifier when assigning
             p->panic_mode = true;
             p->errors++;
@@ -632,7 +642,7 @@ ASTNode* parse_additive(Parser* p) {
 
 ASTNode* parse_multiplicative(Parser* p) {
     ASTNode* left; _parse(left, parse_primary(p));
-    while (match(p, STAR) || match(p, FSLASH) || match(p, MODULO)) {
+    while (match(p, STAR) || match(p, SLASH) || match(p, MODULO)) {
         // get the current op that it is and then check right identifier
         Token* l_op = advance(p);
         TokenType op = l_op->type;
@@ -680,7 +690,7 @@ ASTNode* parse_primary(Parser* p) {
 
     switch(tok->type) {
         case IDENTIFIER: {
-            const char* name = tok->data.lexeme;
+            const char* name = tok->start;
 
             // Note: handling undefined indentifiers is left to the type-checker
             // which will have all information of the program.
@@ -702,7 +712,7 @@ ASTNode* parse_primary(Parser* p) {
         case CHAR_LITERAL:
         case TRUE:
         case FALSE:
-        case NULL_LITERAL: {
+        case NULL_: {
             return create_literal(advance(p), tok->line);
         }
         case LPAREN: {
@@ -725,7 +735,9 @@ ASTNode* parse_primary(Parser* p) {
         default:
             p->panic_mode = true;
             p->errors++;
-            error_report(get_token_line(p), "Parser", "unexpected token in expression: %s\n", tok_string(tok->type));
+            error_report(get_token_line(p), "Parser",
+                    "unexpected token in expression: %s\n",
+                    tok_string(tok->type));
             return NULL;
     }
 }
@@ -737,10 +749,12 @@ ASTNode* parse_type(Parser* p) {
         advance(p);
     }
     Token* tok = current(p);
-    if (tok == NULL || tok->category != Primitive_type) {
+    if (tok == NULL || !is_primitive(tok->type) || tok->type == U0) {
         p->panic_mode = true;
         p->errors++;
-        error_report(get_token_line(p), "Parser", "expected type specifier instead of: %s\n", tok_string(tok->type));
+        error_report(get_token_line(p), "Parser",
+                "expected type specifier instead of: %s\n",
+                tok_string(tok->type));
         return NULL;
     }
 

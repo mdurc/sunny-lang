@@ -28,7 +28,7 @@ ASTNode* parse_var_decl(Parser* p);
 ASTNode* parse_expression(Parser* parser);
 
 ASTNode* parse_type(Parser* p);
-ASTNode* parse_param(Parser* p);
+ASTNode* parse_param(Parser* p, bool is_param);
 ASTNode* parse_block(Parser* p, bool create_scope);
 ASTNode* parse_assignment(Parser* p);
 
