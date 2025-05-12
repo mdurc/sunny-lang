@@ -178,6 +178,10 @@ ASTNode* parse_function(Parser* p) {
         params = realloc(params, ++param_count * sizeof(ASTNode*));
         params[param_count-1] = param;
 
+        if (param_count == 128) {
+            warning_report(l_func, "Parser", "Can't have more than 127 parameters\n");
+        }
+
         // if this is not a comma, we have reached the end
         if (!match(p, COMMA)) break;
     }
@@ -666,6 +670,10 @@ ASTNode* parse_func_call(Parser* p, const char* name, int line) {
         args = realloc(args, ++arg_count * sizeof(ASTNode*));
         args[arg_count-1] = arg;
 
+        if (arg_count == 128) {
+            warning_report(get_token_line(p), "Parser", "Can't have more than 127 arguments\n");
+        }
+
         if (!match(p, COMMA)) break;
         advance(p);
     }
@@ -749,7 +757,11 @@ ASTNode* parse_type(Parser* p) {
         advance(p);
     }
     Token* tok = current(p);
-    if (tok == NULL || !is_primitive(tok->type) || tok->type == U0) {
+    if (tok == NULL || !is_primitive(tok->type) /* || tok->type == U0 */) {
+        // used to also disallow tok->type == U0 but I think it can be helpful
+        // to assign variables to u0 to see if a function is void or not.
+        // this can always be added back to simply ban the use of u0 as a type
+        // while it still existing as the return type of "void" functions
         p->panic_mode = true;
         p->errors++;
         error_report(get_token_line(p), "Parser",

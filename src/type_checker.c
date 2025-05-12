@@ -287,9 +287,7 @@ void typecheck_function_call(ASTNode* call, TypeChecker* ctx) {
     if (return_param_node->node_type == NODE_PARAM) {
         call->resolved_state.token_type = return_param_node->param.type->token_type;
     } else {
-        error_report(call->line, "TypeChecker", "Invalid return type for function '%s'\n", call->func_decl.name);
-        ctx->parser->errors++;
-        return;
+        call->resolved_state.token_type = U0;
     }
 }
 
@@ -686,7 +684,7 @@ void resolve_literal_type(ASTNode* node, TypeChecker* ctx) {
             break;
         case NULL_:
             node->resolved_state.token_type = U0;
-            node->resolved_state.i = node->literal.i;
+            node->resolved_state.i = 0;
             break;
         default:
             error_report(node->line, "TypeChecker", "Unknown literal type for resolution\n");
