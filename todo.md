@@ -1,9 +1,12 @@
 - [x] Make more integer types with specific bit counts via c-ints (this is actually something to implement code gen because we already have type specifiers)
-- [ ] Multi-line comments /\* \*/
+- [x] Multi-line comments /\* \*/
 - [ ] Tree sitter highlighting
 - [ ] Add pointers
+- [ ] Explore Pratt-Parsing for expressions to make precedence easier, instead of the current recursive-descent technique.
 - [x] Add break/continue statements
 - [ ] Add std lib (memory allocation and memory management, arrays/lists, enums, structs)
+    - [ ] `clock()` std function
+- [ ] Add `#define`
 - [x] Type checker
     - [ ] Improve type checking for different possible runtime paths. For immutable vars for example, if it will ever be assigned once on any given branching path, this should be valid because it will never be assigned twice, though right now it will be a compiler error.
 - [x] Symbol table
