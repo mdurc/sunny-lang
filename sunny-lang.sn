@@ -1,0 +1,85 @@
+// variable declarations, assignments, literals, expressions
+mut i8 foo;
+foo := 4;
+
+i16 bar;
+bar := 18;
+
+mut i8 foo_ := 2;
+i16 bar_ := 17;
+
+i8 my_char := 'a'; // 97
+
+mut f64 my_float := 3.14;
+
+f64 product := 3.14 * (2 + 1 * 3);
+
+my_float := product + ((foo / 2) % 3);
+
+String str := "my string literal";
+
+mut bool my_bool := true;
+my_bool := false;
+
+3 + 2 * (2 + 3 * 2);
+
+
+// functions
+func ADD (x: u8, y: u8) returns (z: i8)
+{
+    z := x + y;
+}
+
+func RETURN_TWO() returns (two: i8)
+{
+    return 2;
+}
+
+func FOO ()
+{
+    1 + 2;
+    print "does nothing";
+}
+
+ADD(5, 2);
+foo := ADD(8, 8);
+
+FOO();
+
+
+// Control flow
+if (25.2 > 10) {
+    if (false or 8 = 8.0) {
+        print "true false";
+    } else {
+        print "true true";
+    }
+}
+
+for (mut u32 i := 0; i < 10; i := i + 1) {
+    print i;
+}
+
+mut i32 i := 0;
+while (1) {
+    while (true) {
+        while (false) {
+        }
+        for (;;) {
+            break;
+        }
+        if (i = 0) {
+            i := i + 1;
+            continue;
+        }
+        break;
+    }
+    break;
+}
+
+mut u8 shadow := 3;
+{
+    mut f64 shadow := 22.24;
+    print shadow;
+}
+print shadow;

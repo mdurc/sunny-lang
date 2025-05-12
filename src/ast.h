@@ -37,10 +37,6 @@ struct ASTNode {
     // changed by type checker after AST construction
     struct CheckedState {
         TokenType token_type;
-        uint64_t i;
-        bool int_sign; // false is positive, true negative
-        double f;
-        char* s;
     } resolved_state;
 
     union {

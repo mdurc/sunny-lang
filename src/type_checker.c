@@ -1,5 +1,6 @@
 #include "type_checker.h"
 #include "error.h"
+#include "type_cast_util.c"
 
 void typecheck_program(ASTNode* program, Parser* parser) {
     if (program->node_type != NODE_BLOCK) return;
@@ -19,7 +20,7 @@ void typecheck_program(ASTNode* program, Parser* parser) {
 
 void typecheck_node(ASTNode* node, TypeChecker* ctx) {
     if (!node) {
-        fatal_error(-1, "TypeChecker", "Null node was provided to type check");
+        fatal_error(-1, "TypeChecker", "null node was provided to type check\n");
     }
     switch (node->node_type) {
         case NODE_FUNC_CALL:
@@ -87,75 +88,7 @@ void typecheck_node(ASTNode* node, TypeChecker* ctx) {
     }
 }
 
-static TokenType resolve_integer_literal(struct CheckedState* state) {
-    if (state->int_sign == true) {
-        // sign bit is on, thus it is negative, meaning signed integer
-        if (state->i <= (uint64_t)INT8_MAX) return I8;
-        if (state->i <= (uint64_t)INT16_MAX) return I16;
-        if (state->i <= (uint64_t)INT32_MAX) return I32;
-        if (state->i <= (uint64_t)INT64_MAX) return I64;
-    } else {
-        if (state->i <= UINT8_MAX) return U8;
-        if (state->i <= UINT16_MAX) return U16;
-        if (state->i <= UINT32_MAX) return U32;
-        if (state->i <= UINT64_MAX) return U64;
-    }
-
-    fatal_error(-1, "TypeChecker", "Too large of an unsigned integer: %llu\n", state->i);
-    return EOF_;
-}
-
-static int get_bit_width(TokenType type) {
-    switch (type) {
-        case U8:
-        case I8:  return 8;
-        case U16:
-        case I16: return 16;
-        case U32:
-        case I32: return 32;
-        case U64:
-        case I64: return 64;
-        default: return 0;
-    }
-}
-
-static bool is_compatible(TokenType from, TokenType to) {
-    if (from == to) return true;
-    if (from == STRING || to == STRING) return false;
-
-    uint64_t mask = 0;
-    switch (from) {
-        case U8:    mask = (1ULL << U16) | (1ULL << U32) | (1ULL << U64)
-                            | (1ULL << I16) | (1ULL << I32) | (1ULL << I64)
-                            | (1ULL << F64); break;
-        case U16:   mask = (1ULL << U32) | (1ULL << U64) | (1ULL << I32)
-                            | (1ULL << I64) | (1ULL << F64); break;
-        case U32:   mask = (1ULL << U64) | (1ULL << I64) | (1ULL << F64); break;
-        case U64:   mask = (1ULL << F64); break;
-        case I8:    mask = (1ULL << U16) | (1ULL << U32) | (1ULL << U64)
-                            | (1ULL << I16) | (1ULL << I32) | (1ULL << I64)
-                            | (1ULL << F64); break;
-        case I16:   mask = (1ULL << U32) | (1ULL << U64) | (1ULL << I32)
-                            | (1ULL << I64) | (1ULL << F64); break;
-        case I32:   mask = (1ULL << U64) | (1ULL << I64) | (1ULL << F64); break;
-        case I64:   mask = (1ULL << F64); break;
-        case F64:   break;
-        case BOOL:  mask = (1ULL << U8) | (1ULL << U16) | (1ULL << U32)
-                            | (1ULL << U64) | (1ULL << I8) | (1ULL << I16)
-                            | (1ULL << I32) | (1ULL << I64) | (1ULL << F64);
-                            break;
-        case CHAR_LITERAL: mask = (1ULL << U8) | (1ULL << U16) | (1ULL << U32)
-                            | (1ULL << U64) | (1ULL << I8) | (1ULL << I16)
-                            | (1ULL << I32) | (1ULL << I64) | (1ULL << F64)
-                            | (1ULL << BOOL);
-                            break;
-        default:         return false;
-    }
-
-    return (mask & (1ULL << to)) != 0;
-}
-
-static bool check_all_paths_return(ASTNode* node, TypeChecker* ctx, const char* return_var, bool assigned) {
+bool check_all_paths_return(ASTNode* node, TypeChecker* ctx, const char* return_var, bool assigned) {
     if (!node) return assigned;
 
     switch (node->node_type) {
@@ -234,6 +167,7 @@ void typecheck_func_decl(ASTNode* node, TypeChecker* ctx) {
         }
     }
 
+    node->resolved_state.token_type = return_type;
     // restore context
     ctx->current_return_type = prev_return_type;
     ctx->symtab = previous_symtab;
@@ -272,7 +206,7 @@ void typecheck_function_call(ASTNode* call, TypeChecker* ctx) {
         ASTNode* param = func_decl_ast->func_decl.params[i];
         TokenType expected_type = param->param.type->token_type;
 
-        if (arg->resolved_state.token_type != expected_type) {
+        if (!can_implicit_cast(arg->resolved_state.token_type, expected_type)) {
             error_report(call->line, "TypeChecker",
                         "Argument %d type mismatch in '%s': expected %s, got %s\n",
                         i + 1, call->func_decl.name,
@@ -292,7 +226,7 @@ void typecheck_function_call(ASTNode* call, TypeChecker* ctx) {
 }
 
 void typecheck_var_decl(ASTNode* node, TypeChecker* ctx) {
-    // check initializauion type
+    // check initialization type
     ASTNode* expr = node->var_decl.init_value;
     typecheck_assign_expr(node, expr, ctx);
 }
@@ -308,7 +242,7 @@ void typecheck_assign_expr(ASTNode* decl_node, ASTNode* expr, TypeChecker* ctx) 
 
     TokenType rhs_type = expr->resolved_state.token_type;
 
-    if (!is_compatible(rhs_type, decl_type)) {
+    if (!can_implicit_cast(rhs_type, decl_type)) {
         error_report(decl_node->line, "TypeChecker",
                 "Variable '%s' type mismatch: declared %s, initialized/assigned with %s\n",
                 decl_node->var_decl.name, tok_string(decl_type), tok_string(rhs_type));
@@ -325,13 +259,14 @@ void resolve_identifier_type(ASTNode* node, TypeChecker* ctx) {
     }
     // we access the ast node that is a part of the symbol table, which must
     // have come from the variables declaration, which must have an associated primitive type
-    node->resolved_state.token_type = sym->ast_node->var_decl.var_type->token_type;
+    TokenType decl_type = sym->ast_node->var_decl.var_type->token_type;
+    node->resolved_state.token_type = decl_type;
 }
 
 void typecheck_if(ASTNode* node, TypeChecker* ctx) {
     typecheck_node(node->if_stmt.cond, ctx);
     TokenType resolved_t = node->if_stmt.cond->resolved_state.token_type;
-    if (resolved_t != BOOL) {
+    if (!can_implicit_cast(resolved_t, BOOL)) {
         error_report(node->line, "TypeChecker",
                 "Condition of 'if' statement must be a boolean or a non-zero integer, got %s\n",
                  tok_string(resolved_t));
@@ -350,7 +285,7 @@ void typecheck_if(ASTNode* node, TypeChecker* ctx) {
 void typecheck_while(ASTNode* node, TypeChecker* ctx) {
     typecheck_node(node->if_stmt.cond, ctx);
     TokenType resolved_t = node->if_stmt.cond->resolved_state.token_type;
-    if (resolved_t != BOOL) {
+    if (!can_implicit_cast(resolved_t, BOOL)) {
         error_report(node->line, "TypeChecker", "Condition of 'while' loop must be a boolean, got %s\n",
                      tok_string(resolved_t));
         ctx->parser->errors++;
@@ -368,17 +303,22 @@ void typecheck_for(ASTNode* node, TypeChecker* ctx) {
     SymbolTable* previous_symtab = ctx->symtab;
     ctx->symtab = node->for_stmt.symtab; // scope of the for loop (..){..}
 
-    typecheck_node(node->for_stmt.init_expr, ctx);
+    ASTNode* init_node = node->for_stmt.init_expr;
+    if (init_node) typecheck_node(init_node, ctx);
 
-    typecheck_node(node->for_stmt.end_expr, ctx);
-    TokenType resolved_t = node->for_stmt.end_expr->resolved_state.token_type;
-    if (resolved_t != BOOL) {
-        error_report(node->line, "TypeChecker", "Condition of 'for' loop must be a boolean, got %s\n",
-                tok_string(resolved_t));
-        ctx->parser->errors++;
+    ASTNode* end_node = node->for_stmt.end_expr;
+    if(end_node) {
+        typecheck_node(end_node, ctx);
+        TokenType resolved_t = node->for_stmt.end_expr->resolved_state.token_type;
+        if (!can_implicit_cast(resolved_t, BOOL)) {
+            error_report(node->line, "TypeChecker", "Condition of 'for' loop must be a boolean, got %s\n",
+                    tok_string(resolved_t));
+            ctx->parser->errors++;
+        }
     }
 
-    typecheck_node(node->for_stmt.iter_expr, ctx);
+    ASTNode* iter_node = node->for_stmt.iter_expr;
+    if (iter_node) typecheck_node(iter_node, ctx);
 
     bool was_in_loop = ctx->in_loop;
     ctx->in_loop = true;
@@ -426,265 +366,29 @@ void typecheck_assign(ASTNode* node, TypeChecker* ctx) {
     }
 
     // we can then treat this as a variable assignment
-    int err_count = ctx->parser->errors;
-
     typecheck_assign_expr(decl_node, expr, ctx);
 
-    if (ctx->parser->errors == err_count) {
-        node->resolved_state.i = 1; // true
-    } else {
-        node->resolved_state.i = 0; // false
-    }
-
     node->resolved_state.token_type = BOOL;
-}
-
-static void type_error(TypeChecker* ctx, ASTNode* node, const char* requirement, TokenType lt, TokenType rt) {
-    error_report(node->line, "TypeChecker",
-               "Operands of '%s' must be %s, got %s and %s\n",
-               tok_string(node->bin_op.op), requirement, tok_string(lt), tok_string(rt));
-    ctx->parser->errors++;
-}
-
-static bool is_numeric(TokenType t) {
-    switch(t) {
-        case INT_LITERAL: case FLOAT_LITERAL:
-        case U8: case U16: case U32: case U64: case I8:
-        case I16: case I32: case I64: case F64:
-            return true;
-        default: return false;
-    }
-}
-
-static bool is_integer(TokenType t) {
-    return t != F64 && t != FLOAT_LITERAL && is_numeric(t);
-}
-
-static bool is_float(TokenType t) {
-    return t != F64 && t != FLOAT_LITERAL;
-}
-
-void typecheck_bin_op(ASTNode* node, TypeChecker* ctx) {
-    ASTNode* left = node->bin_op.left;
-    ASTNode* right = node->bin_op.right;
-
-    typecheck_node(left, ctx);
-    typecheck_node(right, ctx);
-
-    TokenType left_type = left->resolved_state.token_type;
-    TokenType right_type = right->resolved_state.token_type;
-    TokenType op = node->bin_op.op;
-    TokenType result_type = EOF_;
-
-    #define ARITH_OP_INT(OP) \
-        node->resolved_state.i = left->resolved_state.i OP right->resolved_state.i; \
-        int bit_width = get_bit_width(left_type); \
-        if (bit_width > 0) { \
-            uint64_t max_unsigned = (1ULL << bit_width) - 1; \
-            uint64_t max_signed = (1ULL << (bit_width - 1)) - 1; \
-            uint64_t truncated = node->resolved_state.i & max_unsigned; \
-            node->resolved_state.int_sign = (truncated > max_signed); \
-            node->resolved_state.i = truncated; \
-        } \
-        result_type = resolve_integer_literal(&node->resolved_state); \
-
-    #define ARITH_OP(OP) \
-        if (is_integer(left_type)) { \
-            ARITH_OP_INT(OP) \
-        } else { \
-            node->resolved_state.f = left->resolved_state.f OP right->resolved_state.f; \
-            result_type = F64; \
-        }
-
-    #define NUMERIC_COMPARE(OP, TYPE) \
-        node->resolved_state.i = left->resolved_state.TYPE OP right->resolved_state.TYPE;
-    // store in i as a BOOL
-
-    #define CHECK_DIV_ZERO(RIGHT, TYPE) \
-        if (RIGHT->resolved_state.TYPE == 0) { \
-            error_report(node->line, "TypeChecker", "Division by zero"); \
-            ctx->parser->errors++; \
-            return; \
-        }
-
-    switch (op) {
-        // Arithmetic operations
-        case PLUS:
-        case MINUS:
-        case STAR:
-        case SLASH: {
-            if (is_numeric(left_type) && left_type == right_type) {
-                switch (op) {
-                    case PLUS:  ARITH_OP(+) break;
-                    case MINUS: ARITH_OP(-) break;
-                    case STAR:  ARITH_OP(*) break;
-                    case SLASH:
-                        {
-                            if (is_integer(right_type)) {
-                                CHECK_DIV_ZERO(right, i);
-                            } else {
-                                CHECK_DIV_ZERO(right, f);
-                            }
-                            ARITH_OP(/) break;
-                        }
-                    default: break;
-                }
-            } else {
-                type_error(ctx, node, "numeric and same type", left_type, right_type);
-            }
-            break;
-        }
-        case MODULO:
-            if (is_integer(left_type) && is_integer(right_type)) {
-                CHECK_DIV_ZERO(right, i);
-                ARITH_OP_INT(%)
-            } else {
-                type_error(ctx, node, "integers", left_type, right_type);
-            }
-            break;
-        case GREATER:
-        case GREATER_EQUAL:
-        case LESS:
-        case LESS_EQUAL: {
-            result_type = BOOL;
-            if (is_numeric(left_type) && left_type == right_type) {
-                if (is_integer(left_type)) {
-                    switch (op) {
-                        case GREATER: NUMERIC_COMPARE(>, i) break;
-                        case GREATER_EQUAL: NUMERIC_COMPARE(>=, i) break;
-                        case LESS: NUMERIC_COMPARE(<, i) break;
-                        case LESS_EQUAL: NUMERIC_COMPARE(<=, i) break;
-                        default: break;
-                    }
-                } else {
-                    switch (op) {
-                        case GREATER: NUMERIC_COMPARE(>, f) break;
-                        case GREATER_EQUAL: NUMERIC_COMPARE(>=, f) break;
-                        case LESS: NUMERIC_COMPARE(<, f) break;
-                        case LESS_EQUAL: NUMERIC_COMPARE(<=, f) break;
-                        default: break;
-                    }
-                }
-            } else {
-                type_error(ctx, node, "numeric and same type for comparison", left_type, right_type);
-            }
-            break;
-        }
-        case EQUAL:
-        case BANG_EQUAL: {
-            result_type = BOOL;
-            if (left_type == right_type && left_type != EOF_) {
-                bool match;
-                if (is_integer(left_type) || left_type == BOOL) {
-                    match = left->resolved_state.i == right->resolved_state.i;
-                } else if (!is_float(left_type)) {
-                    match = left->resolved_state.f == right->resolved_state.f;
-                } else {
-                    match = true;
-                }
-
-                node->resolved_state.i = (match == (op == EQUAL)) ? 1 : 0;
-            } else {
-                type_error(ctx, node, "same type for equality", left_type, right_type);
-            }
-            break;
-        }
-        case AND:
-        case OR: {
-            result_type = BOOL;
-            if (left_type == BOOL && right_type == BOOL) {
-                bool lval = left->resolved_state.i;
-                bool rval = right->resolved_state.i;
-                node->resolved_state.i = (op == AND ? lval && rval : lval || rval) ? 1 : 0;
-            } else {
-                type_error(ctx, node, "boolean", left_type, right_type);
-            }
-            break;
-        }
-
-        default:
-            error_report(node->line, "TypeChecker", "Unknown binary operator %s\n", tok_string(op));
-            ctx->parser->errors++;
-            break;
-    }
-
-    #undef ARITH_OP_INT
-    #undef ARITH_OP
-    #undef NUMERIC_COMPARE
-    #undef CHECK_DIV_ZERO
-
-    node->resolved_state.token_type = result_type;
-}
-
-void typecheck_unary_op(ASTNode* node, TypeChecker* ctx) {
-    ASTNode* operand = node->unary_op.operand;
-    typecheck_node(operand, ctx);
-
-    TokenType op = node->unary_op.op;
-    TokenType operand_type = operand->resolved_state.token_type;
-    TokenType result_type = EOF_;
-
-    switch (op) {
-        case MINUS:
-            if (is_numeric(operand_type)) {
-                if (is_integer(operand_type)) {
-                    node->resolved_state.int_sign = !node->resolved_state.int_sign;
-                    result_type = resolve_integer_literal(&node->resolved_state);
-                } else {
-                    node->resolved_state.f = -operand->resolved_state.f;
-                    result_type = F64;
-                }
-            } else {
-                type_error(ctx, node, "numeric", operand_type, EOF_);
-            }
-            break;
-
-        case BANG:
-            if (operand_type == BOOL) {
-                result_type = BOOL;
-                if (node->resolved_state.i != 0) {
-                    node->resolved_state.i = 0;
-                } else {
-                    node->resolved_state.i = 1;
-                }
-            } else {
-                type_error(ctx, node, "boolean", operand_type, EOF_);
-            }
-            break;
-
-        default:
-            error_report(node->line, "TypeChecker", "Unknown unary operator %s\n", tok_string(op));
-            ctx->parser->errors++;
-            break;
-    }
-
-    node->resolved_state.token_type = result_type;
 }
 
 void resolve_literal_type(ASTNode* node, TypeChecker* ctx) {
     switch (node->token_type) {
         case INT_LITERAL:
         case CHAR_LITERAL:
-            node->resolved_state.i = node->literal.i;
-            node->resolved_state.int_sign = false; // isolated literals are always positive
-            node->resolved_state.token_type = resolve_integer_literal(&node->resolved_state);
+            node->resolved_state.token_type = INT_LITERAL;
             break;
         case FLOAT_LITERAL:
             node->resolved_state.token_type = F64;
-            node->resolved_state.f = node->literal.f;
             break;
         case STRING_LITERAL:
             node->resolved_state.token_type = STRING;
-            node->resolved_state.s = node->literal.s;
             break;
         case TRUE:
         case FALSE:
             node->resolved_state.token_type = BOOL;
-            node->resolved_state.i = node->literal.i;
             break;
         case NULL_:
             node->resolved_state.token_type = U0;
-            node->resolved_state.i = 0;
             break;
         default:
             error_report(node->line, "TypeChecker", "Unknown literal type for resolution\n");
@@ -701,13 +405,13 @@ void typecheck_print(ASTNode* node, TypeChecker* ctx) {
     if (is_numeric(operand->resolved_state.token_type) ||
             operand->resolved_state.token_type == BOOL ||
             operand->resolved_state.token_type == STRING) {
-        // OK
-    } else if (operand->resolved_state.token_type == EOF_) {
-        error_report(node->line, "TypeChecker", "Cannot print an expression with unresolved type\n");
-        ctx->parser->errors++;
+        return; // OK
     }
 
-    // no resolved type or state
+    error_report(node->line, "TypeChecker",
+            "Cannot print an expression with type %s\n",
+            tok_string(operand->resolved_state.token_type));
+    ctx->parser->errors++;
 }
 
 void typecheck_return(ASTNode* node, TypeChecker* ctx) {
@@ -719,7 +423,9 @@ void typecheck_return(ASTNode* node, TypeChecker* ctx) {
 
     if (node->unary_op.operand) {
         typecheck_node(node->unary_op.operand, ctx);
-        if (node->unary_op.operand->resolved_state.token_type != ctx->current_return_type) {
+        TokenType t1 = node->unary_op.operand->resolved_state.token_type;
+        TokenType t2 = ctx->current_return_type;
+        if (!can_implicit_cast(t1, t2)) {
             error_report(node->line, "TypeChecker", "Return type mismatch: expected %s, got %s\n",
                          tok_string(ctx->current_return_type),
                          tok_string(node->unary_op.operand->resolved_state.token_type));
@@ -731,4 +437,127 @@ void typecheck_return(ASTNode* node, TypeChecker* ctx) {
                      tok_string(ctx->current_return_type));
         ctx->parser->errors++;
     }
+}
+
+void type_error(TypeChecker* ctx, bool bin_op, ASTNode* node, const char* requirement, TokenType lt, TokenType rt) {
+    error_report(node->line, "TypeChecker",
+               "Operands of '%s' must be %s, got %s and %s\n",
+               tok_string(bin_op ? node->bin_op.op : node->unary_op.op),
+               requirement, tok_string(lt), tok_string(rt));
+    ctx->parser->errors++;
+}
+
+
+void typecheck_bin_op(ASTNode* node, TypeChecker* ctx) {
+    ASTNode* left = node->bin_op.left;
+    ASTNode* right = node->bin_op.right;
+
+    typecheck_node(left, ctx);
+    typecheck_node(right, ctx);
+
+    TokenType left_type = left->resolved_state.token_type;
+    TokenType right_type = right->resolved_state.token_type;
+    TokenType op = node->bin_op.op;
+    TokenType result_type = EOF_;
+
+    switch (op) {
+        // Arithmetic operations
+        case PLUS:
+        case MINUS:
+        case STAR:
+        case SLASH: {
+            if (!is_numeric(left_type) || !is_numeric(right_type)) {
+                type_error(ctx, true, node, "numeric", left_type, right_type);
+                break;
+            }
+            result_type = is_float(left_type) ? left_type : right_type;
+            break;
+        }
+        case MODULO:
+            if (!is_integer(left_type) || !is_integer(right_type)) {
+                type_error(ctx, true, node, "integers", left_type, right_type);
+                break;
+            }
+            result_type = left_type;
+            break;
+        case GREATER:
+        case GREATER_EQUAL:
+        case LESS:
+        case LESS_EQUAL: {
+            if (!is_numeric(left_type)) {
+                type_error(ctx, true, node, "numeric", left_type, right_type);
+                break;
+            }
+            result_type = BOOL;
+            break;
+        }
+        case EQUAL:
+        case BANG_EQUAL: {
+            if ((left_type != BOOL && !is_numeric(left_type)) ||
+                    (right_type != BOOL && !is_numeric(right_type))) {
+                type_error(ctx, true, node, "valid and same type for equality", left_type, right_type);
+                break;
+            }
+            result_type = BOOL;
+            break;
+        }
+        case AND:
+        case OR: {
+            if ((left_type != BOOL && !is_numeric(left_type)) ||
+                    (right_type != BOOL && !is_numeric(right_type))) {
+                type_error(ctx, true, node, "boolean", left_type, right_type);
+                break;
+            }
+            result_type = BOOL;
+            break;
+        }
+
+        default:
+            error_report(node->line, "TypeChecker", "Unknown binary operator %s\n", tok_string(op));
+            ctx->parser->errors++;
+            break;
+    }
+
+    node->resolved_state.token_type = result_type;
+}
+
+void typecheck_unary_op(ASTNode* node, TypeChecker* ctx) {
+    ASTNode* operand = node->unary_op.operand;
+    typecheck_node(operand, ctx);
+
+    TokenType op = node->unary_op.op;
+    TokenType operand_type = operand->resolved_state.token_type;
+    TokenType result_type = EOF_;
+
+    switch (op) {
+        case MINUS:
+            if (!is_numeric(operand_type)) {
+                type_error(ctx, false, node, "numeric", operand_type, EOF_);
+                break;
+            }
+
+            result_type = operand_type;
+
+            if (is_integer(operand_type)) {
+                result_type = operand_type;
+            } else {
+                result_type = F64;
+            }
+            break;
+
+        case BANG:
+            if (operand_type != BOOL) {
+                type_error(ctx, false, node, "boolean", operand_type, EOF_);
+                break;
+            }
+            result_type = BOOL;
+            break;
+
+        default:
+            error_report(node->line, "TypeChecker", "Unknown unary operator %s\n", tok_string(op));
+            ctx->parser->errors++;
+            break;
+    }
+
+    node->resolved_state.token_type = result_type;
 }

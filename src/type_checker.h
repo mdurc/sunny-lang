@@ -30,4 +30,6 @@ void resolve_literal_type(ASTNode* node, TypeChecker* ctx);
 void typecheck_print(ASTNode* node, TypeChecker* ctx);
 void typecheck_return(ASTNode* node, TypeChecker* ctx);
 
+bool check_all_paths_return(ASTNode* node, TypeChecker* ctx, const char* return_var, bool assigned);
+void type_error(TypeChecker* ctx, bool bin_op, ASTNode* node, const char* requirement, TokenType lt, TokenType rt);
 #endif
