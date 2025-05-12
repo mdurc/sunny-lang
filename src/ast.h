@@ -46,7 +46,7 @@ struct ASTNode {
     union {
         // function declaration
         struct {
-            ASTNode* return_type;
+            ASTNode* return_param;
             char* name;
             ASTNode** params;
             int param_count;
@@ -115,7 +115,7 @@ struct ASTNode {
 };
 
 ASTNode* create_func_call(const char* name, ASTNode** args, int arg_count, int line);
-ASTNode* create_func_decl(ASTNode* return_type, const char* name, ASTNode** params, int param_count, ASTNode* body, SymbolTable* symtab, int line);
+ASTNode* create_func_decl(ASTNode* return_param, const char* name, ASTNode** params, int param_count, ASTNode* body, SymbolTable* symtab, int line);
 ASTNode* create_block(ASTNode** statements, int count, SymbolTable* symtab, int line);
 ASTNode* create_bin_op(TokenType op, ASTNode* left, ASTNode* right, int line);
 ASTNode* create_unary_op(TokenType op, ASTNode* operand, int line);

@@ -4,14 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-ASTNode* create_func_decl(ASTNode* return_type, const char* name,
+ASTNode* create_func_decl(ASTNode* return_param, const char* name,
         ASTNode** params, int param_count, ASTNode* body, SymbolTable* symtab, int line) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_FUNC_DECL;
     node->token_type = FUNC;
     node->line = line;
     node->resolved_state.token_type = EOF_;
-    node->func_decl.return_type = return_type;
+    node->func_decl.return_param = return_param;
     node->func_decl.name = strdup(name);
     node->func_decl.params = params;
     node->func_decl.param_count = param_count;
@@ -240,7 +240,7 @@ void print_ast(ASTNode* node, int indent) {
         case NODE_FUNC_DECL:
             printf("Function: %s at line %d\n", node->func_decl.name, node->line);
             printf("%*sReturn Type:\n", (indent+1)*2, "");
-            print_ast(node->func_decl.return_type, indent+2);
+            print_ast(node->func_decl.return_param, indent+2);
             printf("%*sParameters (%d):\n", (indent+1)*2, "", node->func_decl.param_count);
             for (int i = 0; i < node->func_decl.param_count; i++) {
                 print_ast(node->func_decl.params[i], indent+2);
@@ -374,7 +374,7 @@ void free_ast(ASTNode* node) {
     switch (node->node_type) {
         case NODE_FUNC_DECL:
             free(node->func_decl.name);
-            free_ast(node->func_decl.return_type);
+            free_ast(node->func_decl.return_param);
             for (int i = 0; i < node->func_decl.param_count; i++)
                 free_ast(node->func_decl.params[i]);
             free(node->func_decl.params);

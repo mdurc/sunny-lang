@@ -194,19 +194,19 @@ void typecheck_func_decl(ASTNode* node, TypeChecker* ctx) {
     ctx->symtab = node->func_decl.symtab; // scope of the params and contents of the function
 
     // type check the return type
-    ASTNode* return_type_node = node->func_decl.return_type;
+    ASTNode* return_param_node = node->func_decl.return_param;
     TokenType return_type = EOF_;
-    if (return_type_node->node_type == NODE_PARAM) {
-        return_type = return_type_node->param.type->token_type;
-        Symbol* sym = symtab_lookup(ctx->symtab, return_type_node->param.name);
+    if (return_param_node->node_type == NODE_PARAM) {
+        return_type = return_param_node->param.type->token_type;
+        Symbol* sym = symtab_lookup(ctx->symtab, return_param_node->param.name);
         if (!sym) {
-            error_report(node->line, "TypeChecker", "Return variable '%s' not declared\n", return_type_node->param.name);
+            error_report(node->line, "TypeChecker", "Return variable '%s' not declared\n", return_param_node->param.name);
             ctx->parser->errors++;
             ctx->symtab = previous_symtab;
             return;
         }
-    } else if (return_type_node->node_type == NODE_PRIMITIVE && return_type_node->token_type == U0) {
-        return_type = return_type_node->token_type;
+    } else if (return_param_node->node_type == NODE_PRIMITIVE && return_param_node->token_type == U0) {
+        return_type = return_param_node->token_type;
     } else {
         error_report(node->line, "TypeChecker", "Malformed return type for function '%s'\n", node->func_decl.name);
         ctx->parser->errors++;
@@ -224,7 +224,7 @@ void typecheck_func_decl(ASTNode* node, TypeChecker* ctx) {
 
     // validate return variable usage for non-void functions
     if (return_type != U0) {
-        const char* return_var_name = return_type_node->param.name;
+        const char* return_var_name = return_param_node->param.name;
         bool all_paths_valid = check_all_paths_return(node->func_decl.body, ctx, return_var_name, false);
         if (!all_paths_valid) {
             error_report(node->line, "TypeChecker",
@@ -283,9 +283,9 @@ void typecheck_function_call(ASTNode* call, TypeChecker* ctx) {
         }
     }
 
-    ASTNode* return_type_node = func_decl_ast->func_decl.return_type;
-    if (return_type_node->node_type == NODE_PARAM) {
-        call->resolved_state.token_type = return_type_node->param.type->token_type;
+    ASTNode* return_param_node = func_decl_ast->func_decl.return_param;
+    if (return_param_node->node_type == NODE_PARAM) {
+        call->resolved_state.token_type = return_param_node->param.type->token_type;
     } else {
         error_report(call->line, "TypeChecker", "Invalid return type for function '%s'\n", call->func_decl.name);
         ctx->parser->errors++;

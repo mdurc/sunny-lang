@@ -184,21 +184,21 @@ ASTNode* parse_function(Parser* p) {
     // If the next character is an IDENTIFIER they clearly missed the comma and mean to add another param
     _consume_go(p, RPAREN, match(p,IDENTIFIER) ? "Expected ',' to separate parameters" : "Expected ')'", err_free_func_params);
 
-    ASTNode* return_type = NULL;
+    ASTNode* return_param = NULL;
     if (match(p, RETURNS)) {
         advance(p);
         _consume_go(p, LPAREN, "Expected '('", err_free_func_params);
-        _parse_go(return_type, parse_param(p, false), err_free_func_params);
+        _parse_go(return_param, parse_param(p, false), err_free_func_params);
         _consume_go(p, RPAREN, "Expected ')'", err_free_func_ret);
     } else {
         // void return type is implicit when ommitting "returns" clause
-        return_type = create_type(false, U0, l_func);
+        return_param = create_type(false, U0, l_func);
     }
 
     // do not create another scope in the body
     ASTNode* body; _parse_go(body, parse_block(p, false), err_free_func_ret);
 
-    ASTNode* this_func = create_func_decl(return_type,
+    ASTNode* this_func = create_func_decl(return_param,
             name_tok->start, params, param_count, body, p->symtab, l_func);
 
     // add the function into the current scope which is now the parent's scope because we just exitted.
@@ -217,7 +217,7 @@ ASTNode* parse_function(Parser* p) {
     return this_func;
 
 err_free_func_ret:
-    free_ast(return_type);
+    free_ast(return_param);
 err_free_func_params:
     for (int i = 0; i < param_count; ++i) { free_ast(params[i]); params[i] = NULL; }
     if (params) free(params);
