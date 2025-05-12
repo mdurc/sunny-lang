@@ -10,22 +10,21 @@
     - Bootstrap compiler
 
 ## Language Features
-- [ ] Strongly typed (with type-checking) & compiled
+- [x] Strongly typed (with type-checking) & compiled
     - Parser adds declared symbols, manages scopes, and asserts that only one declaration (function or variable) appears per identifier.
     - Type checker resolves references, validates assignments and operations on resolved types.
         - Handles context-sensitive rules (location of break/continue/return statements, and forward references)
 - [x] No main function entrypoint is required. Expressions outside of functions are evaluated from top to bottom.
-- [ ] Panic mode recovery for parsing errors: multiple error reporting without cascading
+- [x] Panic mode recovery for parsing errors: multiple error reporting without cascading
     - Has full memory management and freeing all dynamic memory upon any errors. (Complicates the code but can be removed and simplified very easily)
-- [ ] Isolated String expressions are automatically printed to stdout
 - [ ] Structs but no classes
 - [ ] Enums associated to integers
-- [ ] Spaces only
 - [ ] Inline assembly with the `asm { }` block
 - [ ] Function pointers
-- [ ] Implicit value returns
+- [x] Implicit value returns from named return values
+    - Explicit return via `return` keyword is allowed.
 - [ ] Default parameters in any order
-- [ ] Immutability (final in java) by default, forbidding reassignment
+- [x] Immutability (final in java) by default, forbidding reassignment after initialization
     - `mut` keyword upon definition for mutability
 - [ ] Value model for primitive assignment and parameters
 - [ ] Stack trace logs
@@ -52,40 +51,36 @@
 ## Sample
 ```
 ################ Currently Parsable to AST ####################
-# Standard variables
-mut u8 foo := 4;        # mutable declaration and initialization
-u8 bar := 8;            # immutable (cannot be reassigned)
-foo := bar;             # copy by value re-assignment
-f64 my_float;           # immutable float declaration
+// Standard variables
+mut u8 foo := 4;        // mutable declaration and initialization
+u8 bar := 8;            // immutable (cannot be reassigned)
+foo := bar;
+f64 my_float := 3.14;
 
 String str := "this is a string";
-bool my_bool := true;
+bool my_bool;
+my_bool := true; // initialization
 
-u8 my_char_lit := 'a'; # stored as u8 97 in ascii
+u8 my_char_lit := 'a';
 
-# Function Declarations
-# functions implicitly return whatever value is in the "returns" clause
+// Function Declarations
 func ADD (x: u8, y: u8) returns (z: u8)
 {
-    # Note that we cannot redeclare z with a type
-    z := x + y;         # implicit return of z
-
-    # it is also possible to explicitly return something with a return statement
-    # if a return statement is ever reached, as long as it is of type that z is declared as
-    # it will be returned.
+    z := x + y; // implicit return of z
+    // return 3;
 }
 
-# "void" function
+// "void" function
 func FOO ()
 {
     print "this is a void function with no return type";
 }
 
-# Function calls
+// Function calls
 ADD(5, 2);
 
 ####################### Future Additions #######################
-# Pointers
+// Pointers
 mut u8* ptr_c_to_m := &foo;
 
 mut u8* mut ptr_m_to_m := null;
@@ -106,7 +101,7 @@ func EXECUTE(x: u8, y: u8, f: u8 (*)(u8, u8)) returns (z: u8)
 func GET_ADDER() returns (f: u8 (*)(u8, u8))
 {
     f := &ADD;
-    # return  &ADD;
+    // return  &ADD;
 }
 ```
 

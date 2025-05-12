@@ -4,7 +4,6 @@
 - [ ] Add pointers
 - [x] Add break/continue statements
 - [ ] Add std lib (memory allocation and memory management, arrays/lists, enums, structs)
-- [ ] Add multiple return vars (involves expanding returns clause to a parameter list and then type checking that any assignment to this function has the same number and types that the return values will match with)
 - [x] Type checker
     - [ ] Improve type checking for different possible runtime paths. For immutable vars for example, if it will ever be assigned once on any given branching path, this should be valid because it will never be assigned twice, though right now it will be a compiler error.
 - [x] Symbol table

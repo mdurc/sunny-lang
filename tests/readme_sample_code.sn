@@ -1,24 +1,20 @@
 // Standard variables
 mut u8 foo := 4;        // mutable declaration and initialization
 u8 bar := 8;            // immutable (cannot be reassigned)
-foo := bar;             // copy by value re-assignment
-f64 my_float := 3.14;           // immutable float declaration
+foo := bar;
+f64 my_float := 3.14;
 
 String str := "this is a string";
-bool my_bool := true;
+bool my_bool;
+my_bool := true; // initialization
 
 u8 my_char_lit := 'a';
 
 // Function Declarations
-// functions implicitly return whatever value is in the "returns" clause
 func ADD (x: u8, y: u8) returns (z: u8)
 {
-    // Note that we cannot redeclare z with a type
-    z := x + y;         // implicit return of z
-
-    // it is also possible to explicitly return something with a return statement
-    // if a return statement is ever reached, as long as it is of type that z is declared as
-    // it will be returned.
+    z := x + y; // implicit return of z
+    // return 3;
 }
 
 // "void" function
