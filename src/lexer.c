@@ -114,6 +114,24 @@ TokenType lookup_type(const char* str) {
     return IDENTIFIER;
 }
 
+bool is_numeric(TokenType t) {
+    switch(t) {
+        case INT_LITERAL: case FLOAT_LITERAL:
+        case U8: case U16: case U32: case U64: case I8:
+        case I16: case I32: case I64: case F64:
+            return true;
+        default: return false;
+    }
+}
+
+bool is_integer(TokenType t) {
+    return t != F64 && t != FLOAT_LITERAL && is_numeric(t);
+}
+
+bool is_float(TokenType t) {
+    return t == F64 || t == FLOAT_LITERAL;
+}
+
 bool is_primitive(TokenType t) {
     switch(t) {
         case U0: case U8: case U16: case U32: case U64: case I8: case I16:
@@ -141,10 +159,11 @@ void free_token_data(Token* token) {
     free(token->start);
 }
 
-Token* create_lexeme_token(TokenType type, const char* lexeme, int line) {
+Token* create_lexeme_token(TokenType type, const char* lexeme, int row, int col) {
     Token* t = malloc(sizeof(Token)); // memory passed to the caller
     t->type = type;
-    t->line = line;
+    t->row = row;
+    t->col = col;
 
     t->start = strdup(lexeme);
     t->length = strlen(lexeme);
@@ -175,7 +194,8 @@ void add_token(Token*** tokens, int* token_count, int* token_capacity, Token* to
 
 // Put either keyword or identifier (whichever the following chars that are read are) into the list of tokens
 // Only called when c is an alpha or _, so that we know it is not any string/number literal
-void put_keyword_indentifier_token(Token*** tokens, int* token_count, int* token_capacity, FILE* fp, char c, int line) {
+int put_keyword_indentifier_token(Token*** tokens, int* token_count,
+        int* token_capacity, FILE* fp, char c, int row, int col) {
     int len = 0;
     int capacity = 16;
     char* lexeme = malloc(sizeof(char) * capacity);
@@ -200,13 +220,14 @@ void put_keyword_indentifier_token(Token*** tokens, int* token_count, int* token
     lexeme[len] = '\0';
 
     TokenType type = lookup_type(lexeme);
-    Token* t = create_lexeme_token(type, lexeme, line);
+    Token* t = create_lexeme_token(type, lexeme, row, col);
     free(lexeme);
     add_token(tokens, token_count, token_capacity, t);
+    return t->length;
 }
 
 // Parse subsequent number (int and float) literal
-Token* get_number_token(FILE* fp, char c, int line) {
+Token* get_number_token(FILE* fp, char c, int row, int col) {
     int len = 0;
     int capacity = 16;
     char* lexeme = malloc(sizeof(char) * capacity);
@@ -278,7 +299,7 @@ Token* get_number_token(FILE* fp, char c, int line) {
 
     if (len >= 1 && lexeme[len-1] == '.') {
         free(lexeme);
-        fatal_error(line, "Lexer", "trailing '.' characters are not allowed as identifiers or floats\n");
+        fatal_error(row, "Lexer", "trailing '.' characters are not allowed as identifiers or floats\n");
     }
     lexeme[len] = '\0';
 
@@ -289,42 +310,52 @@ Token* get_number_token(FILE* fp, char c, int line) {
         u_val = strtoull(start_num, &iEnd, base); // handles different bases for us
         bool is_num = (iEnd == lexeme + strlen(lexeme)) && (*iEnd == '\0');
 
-        free(lexeme);
-        if (!is_num) {
-            fatal_error(line, "Lexer", "Parsed number lexeme was not a number\n");
-        }
-
         Token* t = malloc(sizeof(Token));
         t->type = INT_LITERAL;
         t->data.int_val = u_val;
-        t->line = line;
+        t->row = row;
+        t->col = col;
+        t->start = strdup(lexeme);
+        t->length = strlen(lexeme);
+
+        free(lexeme);
+        if (!is_num) {
+            free(t->start);
+            free(t);
+            fatal_error(row, "Lexer", "Parsed number lexeme was not a number\n");
+        }
         return t;
     } else {
         char* fEnd;
         double f_val = strtod(lexeme, &fEnd);
         bool is_float = (fEnd == lexeme + strlen(lexeme)) && (*fEnd == '\0');
 
-        free(lexeme);
-        if (!is_float) {
-            fatal_error(line, "Lexer", "Parsed number lexeme was not a number\n");
-        }
-
         Token* t = malloc(sizeof(Token));
         t->type = FLOAT_LITERAL;
         t->data.float_val = f_val;
-        t->line = line;
+        t->row = row;
+        t->col = col;
+        t->start = strdup(lexeme);
+        t->length = strlen(lexeme);
+
+        free(lexeme);
+        if (!is_float) {
+            free(t->start);
+            free(t);
+            fatal_error(row, "Lexer", "Parsed number lexeme was not a number\n");
+        }
         return t;
     }
 }
 
 // Parse subsequent string literal
-Token* get_string_token(FILE* fp, char c, int line) {
+Token* get_string_token(FILE* fp, int row, int col) {
     bool escape_next = false;
     int c_int;
     int len = 0;
     int capacity = 16;
     char* lexeme = malloc(sizeof(char) * capacity);
-    lexeme[len++] = c;
+    lexeme[len++] = '"';
     while ((c_int = fgetc(fp)) != EOF) {
         char next_c = (char)c_int;
 
@@ -344,7 +375,7 @@ Token* get_string_token(FILE* fp, char c, int line) {
             // end of string literal
             lexeme[len++] = next_c;
             lexeme[len] = '\0';
-            Token* str_token = create_lexeme_token(STRING_LITERAL, lexeme, line);
+            Token* str_token = create_lexeme_token(STRING_LITERAL, lexeme, row, col);
             free(lexeme);
             return str_token;
         }
@@ -359,22 +390,23 @@ Token* get_string_token(FILE* fp, char c, int line) {
 
     // we did not find closing quote
     free(lexeme);
-    fatal_error(line, "Lexer", "unterminated string literal in lexeme\n");
+    fatal_error(row, "Lexer", "unterminated string literal in lexeme\n");
     return NULL;
 }
 
 // Parse subsequent char literal
-Token* get_char_token(FILE* fp, int line) {
+Token* get_char_token(FILE* fp, int row, int col) {
     int char_content = fgetc(fp);
-    if (char_content == EOF) fatal_error(line, "Lexer", "no char or end single quote found before EOF\n");
-    if (((char) char_content) == '\\') fatal_error(line, "Lexer", "char content cannot be backslash\n");
+    if (char_content == EOF) fatal_error(row, "Lexer", "no char or end single quote found before EOF\n");
+    if (((char) char_content) == '\\') fatal_error(row, "Lexer", "char content cannot be backslash\n");
 
     // get the closing quote
     int c_int = fgetc(fp);
-    if (c_int == EOF || ((char) c_int) != '\'') fatal_error(line, "Lexer", "no end single quote found\n");
+    if (c_int == EOF || ((char) c_int) != '\'') fatal_error(row, "Lexer", "no end single quote found\n");
 
     Token* t = malloc(sizeof(Token));
-    t->line = line;
+    t->row = row;
+    t->col = col;
     t->type = CHAR_LITERAL;
     t->data.int_val = char_content;
     return t;
@@ -404,7 +436,8 @@ void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
         }
     }
 
-    int line = 1;
+    int row = 1;
+    int col = 0;
 
     int c_int;
     while ((c_int = getc(fp)) != EOF) {
@@ -412,25 +445,30 @@ void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
         // we don't really have a lot of care for whitespace, semicolons and commas are primary
         // for separating statements (besides parentheses and content blocks {} [])
         if (isspace(c_int)) {
-            if (c == '\n') ++line;
+            if (c == '\n') {
+                col = 0;
+                ++row;
+            } else {
+                col++;
+            }
             continue;
         }
 
         switch (c) {
-            case '(': add_token(tokens, token_count, token_capacity, create_lexeme_token(LPAREN, "(", line)); break;
-            case ')': add_token(tokens, token_count, token_capacity, create_lexeme_token(RPAREN, ")", line)); break;
-            case '{': add_token(tokens, token_count, token_capacity, create_lexeme_token(LBRACE, "{", line)); break;
-            case '}': add_token(tokens, token_count, token_capacity, create_lexeme_token(RBRACE, "}", line)); break;
-            case '[': add_token(tokens, token_count, token_capacity, create_lexeme_token(LBRACK, "[", line)); break;
-            case ']': add_token(tokens, token_count, token_capacity, create_lexeme_token(RBRACK, "]", line)); break;
-            case ';': add_token(tokens, token_count, token_capacity, create_lexeme_token(SEMICOLON, ";", line)); break;
-            case ',': add_token(tokens, token_count, token_capacity, create_lexeme_token(COMMA, ":", line)); break;
-            case '~': add_token(tokens, token_count, token_capacity, create_lexeme_token(TILDE, "~", line)); break;
-            case '+': add_token(tokens, token_count, token_capacity, create_lexeme_token(PLUS, "+", line)); break;
-            case '-': add_token(tokens, token_count, token_capacity, create_lexeme_token(MINUS, "-", line)); break;
-            case '*': add_token(tokens, token_count, token_capacity, create_lexeme_token(STAR, "*", line)); break;
-            case '=': add_token(tokens, token_count, token_capacity, create_lexeme_token(EQUAL, "=", line)); break;
-            case '%': add_token(tokens, token_count, token_capacity, create_lexeme_token(MODULO, "%", line)); break;
+            case '(': add_token(tokens, token_count, token_capacity, create_lexeme_token(LPAREN, "(", row, col++)); break;
+            case ')': add_token(tokens, token_count, token_capacity, create_lexeme_token(RPAREN, ")", row, col++)); break;
+            case '{': add_token(tokens, token_count, token_capacity, create_lexeme_token(LBRACE, "{", row, col++)); break;
+            case '}': add_token(tokens, token_count, token_capacity, create_lexeme_token(RBRACE, "}", row, col++)); break;
+            case '[': add_token(tokens, token_count, token_capacity, create_lexeme_token(LBRACK, "[", row, col++)); break;
+            case ']': add_token(tokens, token_count, token_capacity, create_lexeme_token(RBRACK, "]", row, col++)); break;
+            case ';': add_token(tokens, token_count, token_capacity, create_lexeme_token(SEMICOLON, ";", row, col++)); break;
+            case ',': add_token(tokens, token_count, token_capacity, create_lexeme_token(COMMA, ",", row, col++)); break;
+            case '~': add_token(tokens, token_count, token_capacity, create_lexeme_token(TILDE, "~", row, col++)); break;
+            case '+': add_token(tokens, token_count, token_capacity, create_lexeme_token(PLUS, "+", row, col++)); break;
+            case '-': add_token(tokens, token_count, token_capacity, create_lexeme_token(MINUS, "-", row, col++)); break;
+            case '*': add_token(tokens, token_count, token_capacity, create_lexeme_token(STAR, "*", row, col++)); break;
+            case '=': add_token(tokens, token_count, token_capacity, create_lexeme_token(EQUAL, "=", row, col++)); break;
+            case '%': add_token(tokens, token_count, token_capacity, create_lexeme_token(MODULO, "%", row, col++)); break;
 
             // compounds operators
             case ':': {
@@ -439,7 +477,9 @@ void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
                                   token_capacity,
                                   create_lexeme_token(match ?
                                       WALRUS : COLON,
-                                      match ? ":=" : ":", line));
+                                      match ? ":=" : ":", row, col));
+                          if (match) col += 2;
+                          else col++;
                           break;
                       }
             case '!': {
@@ -448,7 +488,9 @@ void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
                                   token_capacity,
                                   create_lexeme_token(match ?
                                       BANG_EQUAL : BANG,
-                                      match ? "!=" : "!", line));
+                                      match ? "!=" : "!", row, col));
+                          if (match) col += 2;
+                          else col++;
                           break;
                       }
             case '<': {
@@ -457,7 +499,9 @@ void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
                                   token_capacity,
                                   create_lexeme_token(match ?
                                       LESS_EQUAL : LESS,
-                                      match ? "<=" : "<", line));
+                                      match ? "<=" : "<", row, col));
+                          if (match) col += 2;
+                          else col++;
                           break;
                       }
             case '>': {
@@ -466,57 +510,77 @@ void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity){
                                   token_capacity,
                                   create_lexeme_token(match ?
                                       GREATER_EQUAL : GREATER,
-                                      match ? ">=" : ">", line));
+                                      match ? ">=" : ">", row, col));
+                          if (match) col += 2;
+                          else col++;
                           break;
                       }
 
             case '\'': add_token(tokens, token_count,
                                token_capacity,
-                               get_char_token(fp, line)); break;
-            case '"': add_token(tokens, token_count,
-                              token_capacity,
-                              get_string_token(fp, c, line)); break;
+                               get_char_token(fp, row, col));
+                       col += 3; // 'c'
+                       break;
+            case '"': {
+                          Token* str_token = get_string_token(fp, row, col);
+                          add_token(tokens, token_count,
+                                  token_capacity,
+                                  str_token);
+                          col += str_token->length; // includes the quotes
+                          break;
+                      }
 
             // comments
             case '/':
               {
-                  int starting_line = line;
+                  int starting_row = row;
                   if (match_char(fp, '/')) { // single line comment
                       // comment out the rest of the line
                       while ((c_int = getc(fp)) != EOF && (char)c_int != '\n');
-                      if (c_int != EOF) ++line;
+                      if (c_int != EOF) {
+                          ++row;
+                          col = 0;
+                      }
                   } else if (match_char(fp, '*')) { // block comment
                       bool comment_closed = false;
+                      col += 2; // opening / and *
                       while ((c_int = getc(fp)) != EOF) {
                           c = (char)c_int;
                           if (c == '*') {
                               if (match_char(fp, '/')) {
                                   comment_closed = true;
+                                  col += 2; // closing * and /
                                   break;
+                              } else {
+                                  col += 1;
                               }
                           } else if (c == '\n') {
-                              ++line;
+                              ++row;
+                              col = 0;
+                          } else {
+                              col++;
                           }
                       }
                       if (!comment_closed) {
-                          fatal_error(starting_line, "Lexer", "unterminated block comment\n");
+                          fatal_error(starting_row, "Lexer", "unterminated block comment\n");
                       }
                   } else {
-                      add_token(tokens, token_count, token_capacity, create_lexeme_token(SLASH, "/", line));
+                      add_token(tokens, token_count, token_capacity, create_lexeme_token(SLASH, "/", row, col++));
                   }
                   break;
               }
             default:
               {
                   if (isdigit(c_int)) {
-                      add_token(tokens, token_count,
-                              token_capacity,
-                              get_number_token(fp, c, line));
+                      Token* num_token = get_number_token(fp, c, row, col);
+                      add_token(tokens, token_count, token_capacity, num_token);
+                      col += num_token->length;
                   } else if (isalpha(c_int) || c == '_') {
-                      put_keyword_indentifier_token(tokens, token_count,
-                              token_capacity, fp, c, line);
+                      int count = put_keyword_indentifier_token(tokens, token_count,
+                              token_capacity, fp, c, row, col);
+                      col += count;
                   } else {
-                      fatal_error(line, "Lexer", "unexpected token (%c)\n", c);
+                      fatal_error(row, "Lexer", "unexpected token (%c)\n", c);
                   }
                   break;
               }

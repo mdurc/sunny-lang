@@ -20,7 +20,7 @@ typedef struct {
 Parser* parser_init(Token** tokens, int count);
 ASTNode* parse_program(Parser* parser);
 ASTNode* parse_function(Parser* parser);
-ASTNode* parse_func_call(Parser* p, const char* name, int line);
+ASTNode* parse_func_call(Parser* p, const char* name, int line, int col, int len);
 ASTNode* parse_if(Parser* p);
 ASTNode* parse_for(Parser* p);
 ASTNode* parse_statement(Parser* parser);

@@ -23,14 +23,9 @@ void run_test(const char* test_str) {
         if (tokens[i] == NULL) {
             printf("null token\n");
         } else {
-            if (tokens[i]->type == INT_LITERAL) {
-                printf("Int: %lld\n", (int64_t)tokens[i]->data.int_t);
-            } else if (tokens[i]->type == FLOAT_LITERAL) {
-                printf("Float: %f\n", tokens[i]->data.f64_value);
-            } else if (tokens[i]->type == STRING_LITERAL) {
-                printf("Str: %s\n", tokens[i]->data.lexeme);
+            if (tokens[i]->start == NULL) {
             } else {
-                printf("Key/Ident: %s\n", tokens[i]->data.lexeme);
+                printf("Token: %s at [%d, %d]\n", tokens[i]->start, tokens[i]->row, tokens[i]->col);
             }
         }
     }
@@ -81,10 +76,11 @@ int main(int argc, char** argv){
     //test_number_parsing();
 
     //run_test("u8 hi := 3 -2;");
-    run_test("u8 h := 3;");
+    //run_test("u8 h := 3;");
     //run_test("u8 my_number := 13 >= 3 < 1 <= 3 >= 2 != 1;");
     //run_test("f64 hi := 3.14;");
     //run_test("func ADD(u8 x, u8 y) { }");
+    run_test("help// help \n me");
     //run_test("if (true) { }");
 
     return 0;

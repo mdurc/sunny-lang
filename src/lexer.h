@@ -74,7 +74,7 @@ typedef struct {
     TokenType type;
     char* start; // source text from program
     int length; // length of lexeme string
-    int line;
+    int row, col;
 
     union {
         uint64_t int_val;
@@ -84,13 +84,21 @@ typedef struct {
 } Token;
 
 const char* tok_string(TokenType type);
+bool is_numeric(TokenType t);
+bool is_integer(TokenType t);
+bool is_float(TokenType t);
 bool is_primitive(TokenType t);
 bool is_literal(TokenType t);
-bool match_char(FILE* fp, char c);
-void free_token_data(Token* token);
-Token* alloc_token_lexeme_data(TokenType type, const char* lexeme, int line);
-Token* create_literal_token(const char* lexeme, int line);
-Token* create_token(const char* lexeme, int line);
+
 void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity);
+void free_token_data(Token* token);
+
+Token* create_lexeme_token(TokenType type, const char* lexeme, int line, int col);
+int put_keyword_indentifier_token(Token*** tokens, int* token_count,
+        int* token_capacity, FILE* fp, char c, int line, int col);
+Token* get_number_token(FILE* fp, char c, int line, int col);
+Token* get_string_token(FILE* fp, int line, int col);
+Token* get_char_token(FILE* fp, int line, int col);
+bool match_char(FILE* fp, char c);
 
 #endif

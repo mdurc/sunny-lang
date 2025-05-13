@@ -5,11 +5,14 @@
 #include <string.h>
 
 ASTNode* create_func_decl(ASTNode* return_param, const char* name,
-        ASTNode** params, int param_count, ASTNode* body, SymbolTable* symtab, int line) {
+        ASTNode** params, int param_count, ASTNode* body, SymbolTable* symtab,
+        int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_FUNC_DECL;
     node->token_type = FUNC;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     node->func_decl.return_param = return_param;
     node->func_decl.name = strdup(name);
@@ -20,11 +23,13 @@ ASTNode* create_func_decl(ASTNode* return_param, const char* name,
     return node;
 }
 
-ASTNode* create_func_call(const char* name, ASTNode** args, int arg_count, int line) {
+ASTNode* create_func_call(const char* name, ASTNode** args, int arg_count, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_FUNC_CALL;
     node->token_type = IDENTIFIER;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     // reuse func_decl space
     node->func_decl.name = strdup(name);
@@ -33,42 +38,50 @@ ASTNode* create_func_call(const char* name, ASTNode** args, int arg_count, int l
     return node;
 }
 
-ASTNode* create_identifier(const char* name, int line) {
+ASTNode* create_identifier(const char* name, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_IDENTIFIER;
     node->token_type = IDENTIFIER;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     node->identifier = strdup(name);
     return node;
 }
 
-ASTNode* create_type(bool mut, TokenType type, int line) {
+ASTNode* create_type(bool mut, TokenType type, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_PRIMITIVE;
     node->token_type = type;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     node->is_mut = mut;
     return node;
 }
 
-ASTNode* create_param(ASTNode* type, const char* name, int line) {
+ASTNode* create_param(ASTNode* type, const char* name, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_PARAM;
     node->token_type = IDENTIFIER;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     node->param.type = type;
     node->param.name = strdup(name);
     return node;
 }
 
-ASTNode* create_block(ASTNode** statements, int count, SymbolTable* symtab, int line) {
+ASTNode* create_block(ASTNode** statements, int count, SymbolTable* symtab, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_BLOCK;
     node->token_type = LBRACE;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     node->block.statements = statements;
     node->block.stmt_count = count;
@@ -76,21 +89,25 @@ ASTNode* create_block(ASTNode** statements, int count, SymbolTable* symtab, int 
     return node;
 }
 
-ASTNode* create_print(ASTNode* expr, int line) {
+ASTNode* create_print(ASTNode* expr, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_PRINT;
     node->token_type = PRINT;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     node->unary_op.operand = expr;
     return node;
 }
 
-ASTNode* create_if(ASTNode* cond, ASTNode* then_block, ASTNode* else_block, int line) {
+ASTNode* create_if(ASTNode* cond, ASTNode* then_block, ASTNode* else_block, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_IF;
     node->token_type = IF;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     node->if_stmt.cond = cond;
     node->if_stmt.then_block = then_block;
@@ -98,11 +115,13 @@ ASTNode* create_if(ASTNode* cond, ASTNode* then_block, ASTNode* else_block, int 
     return node;
 }
 
-ASTNode* create_while(ASTNode* cond, ASTNode* body, int line) {
+ASTNode* create_while(ASTNode* cond, ASTNode* body, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_WHILE;
     node->token_type = WHILE;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     // reuse if_stmt but only with condition and body
     node->if_stmt.cond = cond;
@@ -110,11 +129,13 @@ ASTNode* create_while(ASTNode* cond, ASTNode* body, int line) {
     return node;
 }
 
-ASTNode* create_for(ASTNode* init, ASTNode* end, ASTNode* iter, ASTNode* body, SymbolTable* symtab, int line) {
+ASTNode* create_for(ASTNode* init, ASTNode* end, ASTNode* iter, ASTNode* body, SymbolTable* symtab, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_FOR;
     node->token_type = FOR;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     node->for_stmt.init_expr = init;
     node->for_stmt.end_expr = end;
@@ -124,11 +145,13 @@ ASTNode* create_for(ASTNode* init, ASTNode* end, ASTNode* iter, ASTNode* body, S
     return node;
 }
 
-ASTNode* create_var_decl(ASTNode* type, const char* name, ASTNode* init, int line) {
+ASTNode* create_var_decl(ASTNode* type, const char* name, ASTNode* init, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_VAR_DECL;
     node->token_type = IDENTIFIER;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     node->var_decl.var_type = type;
     node->var_decl.name = strdup(name);
@@ -136,11 +159,13 @@ ASTNode* create_var_decl(ASTNode* type, const char* name, ASTNode* init, int lin
     return node;
 }
 
-ASTNode* create_assign(const char* name, ASTNode* value, int line) {
+ASTNode* create_assign(const char* name, ASTNode* value, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_ASSIGN;
     node->token_type = IDENTIFIER;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     // reuse var_decl but without type
     node->var_decl.name = strdup(name);
@@ -148,11 +173,13 @@ ASTNode* create_assign(const char* name, ASTNode* value, int line) {
     return node;
 }
 
-ASTNode* create_bin_op(TokenType op, ASTNode* left, ASTNode* right, int line) {
+ASTNode* create_bin_op(TokenType op, ASTNode* left, ASTNode* right, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_BIN_OP;
     node->token_type = op;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     node->bin_op.op = op;
     node->bin_op.left = left;
@@ -160,11 +187,13 @@ ASTNode* create_bin_op(TokenType op, ASTNode* left, ASTNode* right, int line) {
     return node;
 }
 
-ASTNode* create_unary_op(TokenType op, ASTNode* operand, int line) {
+ASTNode* create_unary_op(TokenType op, ASTNode* operand, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_UNARY_OP;
     node->token_type = op;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     node->unary_op.op = op;
     node->unary_op.operand = operand;
@@ -172,21 +201,25 @@ ASTNode* create_unary_op(TokenType op, ASTNode* operand, int line) {
 }
 
 
-ASTNode* create_return(ASTNode* expr, int line) {
+ASTNode* create_return(ASTNode* expr, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_RETURN;
     node->token_type = RETURN;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     node->unary_op.operand = expr;
     return node;
 }
 
-ASTNode* create_literal(Token* token, int line) {
+ASTNode* create_literal(Token* token, int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_LITERAL;
     node->token_type = token->type;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
 
     switch(token->type) {
@@ -208,26 +241,30 @@ ASTNode* create_literal(Token* token, int line) {
             node->literal.i = 0;
             break;
         default:
-            fatal_error(token->line, "AST", "Invalid literal type: %d\n", token->type);
+            fatal_error(token->row, "AST", "Invalid literal type: %d\n", token->type);
             exit(EXIT_FAILURE);
     }
     return node;
 }
 
-ASTNode* create_break(int line) {
+ASTNode* create_break(int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_BREAK;
     node->token_type = BREAK;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     return node;
 }
 
-ASTNode* create_continue(int line) {
+ASTNode* create_continue(int row, int col, int len) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->node_type = NODE_CONTINUE;
     node->token_type = CONTINUE;
-    node->line = line;
+    node->row = row;
+    node->col = col;
+    node->len = len;
     node->resolved_state.token_type = EOF_;
     return node;
 }
@@ -238,7 +275,7 @@ void print_ast(ASTNode* node, int indent) {
 
     switch (node->node_type) {
         case NODE_FUNC_DECL:
-            printf("Function: %s at line %d\n", node->func_decl.name, node->line);
+            printf("Function: %s at line %d\n", node->func_decl.name, node->row);
             printf("%*sReturn Type:\n", (indent+1)*2, "");
             print_ast(node->func_decl.return_param, indent+2);
             printf("%*sParameters (%d):\n", (indent+1)*2, "", node->func_decl.param_count);
@@ -249,63 +286,63 @@ void print_ast(ASTNode* node, int indent) {
             print_ast(node->func_decl.body, indent+2);
             break;
         case NODE_BLOCK:
-            printf("Block (%d statements) at line %d:\n", node->block.stmt_count, node->line);
+            printf("Block (%d statements) at line %d:\n", node->block.stmt_count, node->row);
             for (int i = 0; i < node->block.stmt_count; i++) {
                 print_ast(node->block.statements[i], indent+1);
             }
             break;
         case NODE_BIN_OP:
-            printf("Binary Operation: %s at line %d\n", tok_string(node->bin_op.op), node->line);
+            printf("Binary Operation: %s at line %d\n", tok_string(node->bin_op.op), node->row);
             print_ast(node->bin_op.left, indent+1);
             print_ast(node->bin_op.right, indent+1);
             break;
         case NODE_UNARY_OP:
-            printf("Unary Operation: %s at line %d\n", tok_string(node->unary_op.op), node->line);
+            printf("Unary Operation: %s at line %d\n", tok_string(node->unary_op.op), node->row);
             print_ast(node->unary_op.operand, indent+1);
             break;
         case NODE_LITERAL:
             if (node->token_type == INT_LITERAL)
-                printf("Integer Literal: %lld at line %d\n", node->literal.i, node->line);
+                printf("Integer Literal: %lld at line %d\n", node->literal.i, node->row);
             else if (node->token_type == CHAR_LITERAL)
-                printf("Char Literal (ascii): %lld at line %d\n", node->literal.i, node->line);
+                printf("Char Literal (ascii): %lld at line %d\n", node->literal.i, node->row);
             else if (node->token_type == FLOAT_LITERAL)
-                printf("Float Literal: %f at line %d\n", node->literal.f, node->line);
+                printf("Float Literal: %f at line %d\n", node->literal.f, node->row);
             else if (node->token_type == STRING_LITERAL)
-                printf("String Literal: \"%s\" at line %d\n", node->literal.s, node->line);
+                printf("String Literal: \"%s\" at line %d\n", node->literal.s, node->row);
             else if (node->token_type == TRUE)
-                printf("Boolean Literal: true at line %d\n", node->line);
+                printf("Boolean Literal: true at line %d\n", node->row);
             else if (node->token_type == FALSE)
-                printf("Boolean Literal: false at line %d\n", node->line);
+                printf("Boolean Literal: false at line %d\n", node->row);
             else if (node->token_type == NULL_)
-                printf("Null Literal at line %d\n", node->line);
+                printf("Null Literal at line %d\n", node->row);
             break;
         case NODE_IDENTIFIER:
-            printf("Identifier: %s at line %d\n", node->identifier, node->line);
+            printf("Identifier: %s at line %d\n", node->identifier, node->row);
             break;
         case NODE_PRIMITIVE:
-            printf("Primitive: %s%s at line %d\n", (node->is_mut ? "mut ":""), tok_string(node->token_type), node->line);
+            printf("Primitive: %s%s at line %d\n", (node->is_mut ? "mut ":""), tok_string(node->token_type), node->row);
             break;
         case NODE_PARAM:
-            printf("Parameter: %s at line %d\n", node->param.name, node->line);
+            printf("Parameter: %s at line %d\n", node->param.name, node->row);
             printf("%*sType:\n", (indent+1)*2, "");
             print_ast(node->param.type, indent+2);
             break;
         case NODE_BREAK:
-            printf("Break Statement at line %d\n", node->line);
+            printf("Break Statement at line %d\n", node->row);
             break;
         case NODE_CONTINUE:
-            printf("Continue Statement at line %d\n", node->line);
+            printf("Continue Statement at line %d\n", node->row);
             break;
         case NODE_RETURN:
-            printf("Return Statement at line %d:\n", node->line);
+            printf("Return Statement at line %d:\n", node->row);
             print_ast(node->unary_op.operand, indent+1);
             break;
         case NODE_PRINT:
-            printf("Print Statement at line %d:\n", node->line);
+            printf("Print Statement at line %d:\n", node->row);
             print_ast(node->unary_op.operand, indent+1);
             break;
         case NODE_IF:
-            printf("If Statement at line %d:\n", node->line);
+            printf("If Statement at line %d:\n", node->row);
             printf("%*sCondition:\n", (indent+1)*2, "");
             print_ast(node->if_stmt.cond, indent+2);
             printf("%*sThen Block:\n", (indent+1)*2, "");
@@ -316,7 +353,7 @@ void print_ast(ASTNode* node, int indent) {
             }
             break;
         case NODE_FOR:
-            printf("For Loop at line %d:\n", node->line);
+            printf("For Loop at line %d:\n", node->row);
             printf("%*sInitialization:\n", (indent+1)*2, "");
             print_ast(node->for_stmt.init_expr, indent+2);
             printf("%*sEnd Condition:\n", (indent+1)*2, "");
@@ -327,14 +364,14 @@ void print_ast(ASTNode* node, int indent) {
             print_ast(node->for_stmt.body, indent+2);
             break;
         case NODE_WHILE:
-            printf("While Loop at line %d:\n", node->line);
+            printf("While Loop at line %d:\n", node->row);
             printf("%*sCondition:\n", (indent+1)*2, "");
             print_ast(node->if_stmt.cond, indent+2);
             printf("%*sThen Block:\n", (indent+1)*2, "");
             print_ast(node->if_stmt.then_block, indent+2);
             break;
         case NODE_ASSIGN:
-            printf("Variable Assignment at line %d:\n", node->line);
+            printf("Variable Assignment at line %d:\n", node->row);
             printf("%*sName: %s\n", (indent+1)*2, "", node->var_decl.name);
             if (node->var_decl.init_value) {
                 printf("%*sNew Value:\n", (indent+1)*2, "");
@@ -344,7 +381,7 @@ void print_ast(ASTNode* node, int indent) {
             }
             break;
         case NODE_VAR_DECL:
-            printf("Variable Declaration at line %d:\n", node->line);
+            printf("Variable Declaration at line %d:\n", node->row);
             printf("%*sName: %s\n", (indent+1)*2, "", node->var_decl.name);
             printf("%*sType:\n", (indent+1)*2, "");
             print_ast(node->var_decl.var_type, indent+2);
@@ -356,14 +393,14 @@ void print_ast(ASTNode* node, int indent) {
             }
             break;
         case NODE_FUNC_CALL:
-            printf("Function Call: %s at line %d\n", node->func_decl.name, node->line);
-            printf("%*sArguments (%d) at line %d:\n", (indent+1)*2, "", node->func_decl.param_count, node->line);
+            printf("Function Call: %s at line %d\n", node->func_decl.name, node->row);
+            printf("%*sArguments (%d) at line %d:\n", (indent+1)*2, "", node->func_decl.param_count, node->row);
             for (int i = 0; i < node->func_decl.param_count; i++) {
                 print_ast(node->func_decl.params[i], indent+2);
             }
             break;
         default:
-            fatal_error(node->line, "AST", "Unknown Node Type for AST print: %d\n", node->node_type);
+            fatal_error(node->row, "AST", "Unknown Node Type for AST print: %d\n", node->node_type);
     }
 }
 
@@ -456,7 +493,7 @@ void free_ast(ASTNode* node) {
             break;
 
         default:
-            fatal_error(node->line, "AST", "Warning: Unknown node type %d in free_ast\n", node->node_type);
+            fatal_error(node->row, "AST", "Warning: Unknown node type %d in free_ast\n", node->node_type);
             break;
     }
 

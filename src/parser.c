@@ -35,13 +35,13 @@ static Token* current(Parser* p) {
 }
 
 static int get_token_line(Parser* p) {
-    return current(p) ? current(p)->line : p->last_line;
+    return current(p) ? current(p)->row : p->last_line;
 }
 
 // return token at the current position in the parser and then increment position
 static Token* advance(Parser* p) {
     if (p->pos < p->size) {
-        p->last_line = p->tokens[p->pos]->line;
+        p->last_line = p->tokens[p->pos]->row;
         return p->tokens[p->pos++];
     }
     return NULL;
@@ -149,11 +149,13 @@ ASTNode* parse_program(Parser* p) {
     }
 
     // root is the global content block
-    return create_block(root, count, p->symtab, -1);
+    return create_block(root, count, p->symtab, -1, -1, -1);
 }
 
 ASTNode* parse_function(Parser* p) {
     int l_func = get_token_line(p);
+    int c_func = current(p)->col;
+    int len_func = current(p)->length;
     _consume(p, FUNC, "Expected 'func'"); // returns null on fail
 
     Token* name_tok = current(p);
@@ -196,14 +198,14 @@ ASTNode* parse_function(Parser* p) {
         _consume_go(p, RPAREN, "Expected ')'", err_free_func_ret);
     } else {
         // void return type is implicit when ommitting "returns" clause
-        return_param = create_type(false, U0, l_func);
+        return_param = create_type(false, U0, l_func, c_func, len_func);
     }
 
     // do not create another scope in the body
     ASTNode* body; _parse_go(body, parse_block(p, false), err_free_func_ret);
 
     ASTNode* this_func = create_func_decl(return_param,
-            name_tok->start, params, param_count, body, p->symtab, l_func);
+            name_tok->start, params, param_count, body, p->symtab, l_func, c_func, len_func);
 
     // add the function into the current scope which is now the parent's scope because we just exitted.
     Symbol* func_sym = symtab_insert(p->symtab->parent, name_tok->start, this_func, true);
@@ -212,7 +214,7 @@ ASTNode* parse_function(Parser* p) {
         // duplicate declaration
         p->panic_mode = true;
         p->errors++;
-        error_report(name_tok->line, "Parser", "duplicate function declaration (%s)\n", name_tok->start);
+        error_report(name_tok->row, "Parser", "duplicate function declaration (%s)\n", name_tok->start);
         goto err_free_func_ret;
     }
 
@@ -244,7 +246,7 @@ ASTNode* parse_param(Parser* p, bool is_param) {
     _consume(p, COLON, "Expected ':'");
 
     ASTNode* ast_type; _parse(ast_type, parse_type(p)); // returns null on failure
-    ASTNode* param = create_param(ast_type, name_tok->start, name_tok->line);
+    ASTNode* param = create_param(ast_type, name_tok->start, name_tok->row, name_tok->col, name_tok->length);
 
     // only is_param's are initialized, not "returns" parameters
     Symbol* param_sym = symtab_insert(p->symtab, param->param.name, param, is_param);
@@ -252,7 +254,7 @@ ASTNode* parse_param(Parser* p, bool is_param) {
         // duplicate declaration
         p->panic_mode = true;
         p->errors++;
-        error_report(name_tok->line, "Parser", "duplicate variable declaration within parameters (%s)\n", param->param.name);
+        error_report(name_tok->row, "Parser", "duplicate variable declaration within parameters (%s)\n", param->param.name);
 
         // this should free both the ASTNode type within, and the ASTNode param itself
         free_ast(param);
@@ -268,6 +270,8 @@ ASTNode* parse_block(Parser* p, bool create_scope) {
     }
 
     int l_block = get_token_line(p);
+    int c_block = current(p)->col;
+    int len_block = current(p)->length;
     _consume_go(p, LBRACE, "Expected '{'", err_close_block);
     ASTNode** stmts = NULL;
     int count = 0;
@@ -288,7 +292,7 @@ ASTNode* parse_block(Parser* p, bool create_scope) {
 
     _consume_go(p, RBRACE, "Expected '}'", err_clean_statements);
 
-    ASTNode* this_block = create_block(stmts, count, p->symtab, l_block);
+    ASTNode* this_block = create_block(stmts, count, p->symtab, l_block, c_block, len_block);
 
     if (create_scope) {
         symtab_exit_scope(&p->symtab);
@@ -306,6 +310,8 @@ err_close_block:
 
 ASTNode* parse_if(Parser* p) {
     int l_if = get_token_line(p);
+    int c_if = current(p)->col;
+    int len_if = current(p)->length;
     _consume(p, IF, "Expected if statement");
     _consume(p, LPAREN, "Expected '(' before if");
     ASTNode* cond; _parse(cond, parse_expression(p));
@@ -329,11 +335,13 @@ ASTNode* parse_if(Parser* p) {
             return NULL;
         }
     }
-    return create_if(cond, then_block, else_block, l_if);
+    return create_if(cond, then_block, else_block, l_if, c_if, len_if);
 }
 
 ASTNode* parse_for(Parser* p) {
     int l_for = get_token_line(p);
+    int c_for = current(p)->col;
+    int len_for = current(p)->length;
     _consume(p, FOR, "Expected for statement");
     _consume(p, LPAREN, "Expected '(' after for");
 
@@ -365,7 +373,7 @@ ASTNode* parse_for(Parser* p) {
     // vars will still be accessible from the parent scope in the block {}
     ASTNode* body; _parse_go(body, parse_block(p, true), err_for_iter);
 
-    ASTNode* this_for = create_for(init, end, iter, body, p->symtab, l_for);
+    ASTNode* this_for = create_for(init, end, iter, body, p->symtab, l_for, c_for, len_for);
 
     symtab_exit_scope(&p->symtab); // exit loop init scope
 
@@ -386,7 +394,9 @@ ASTNode* parse_statement(Parser* p) {
     if (match(p, BREAK) || match(p, CONTINUE)) {
         // Checking that these are within a loop context is now a semantic issue and is thus in the type checker
         int l = get_token_line(p);
-        ASTNode* stmt = match(p,BREAK) ? create_break(l) : create_continue(l);
+        int c = current(p)->col;
+        int len = current(p)->length;
+        ASTNode* stmt = match(p,BREAK) ? create_break(l, c, len) : create_continue(l, c, len);
         advance(p);
 
         if (!consume(p, SEMICOLON, "Expected ';' after break/continue")) {
@@ -407,7 +417,7 @@ ASTNode* parse_statement(Parser* p) {
             if (expr) free_ast(expr);
             return NULL;
         }
-        return create_return(expr, l_return->line);
+        return create_return(expr, l_return->row, l_return->col, l_return->length);
     }
 
     if (match(p, PRINT)) {
@@ -417,7 +427,7 @@ ASTNode* parse_statement(Parser* p) {
             free_ast(expr);
             return NULL;
         }
-        return create_print(expr, l_print->line);
+        return create_print(expr, l_print->row, l_print->col, l_print->length);
     }
 
     if (match(p, IF)) {
@@ -425,8 +435,7 @@ ASTNode* parse_statement(Parser* p) {
     }
 
     if (match(p, WHILE)) {
-        int l_while = get_token_line(p);
-        _consume(p, WHILE, "Expected while statement");
+        Token* l_while = advance(p);
         _consume(p, LPAREN, "Expected '(' after while");
 
         ASTNode* cond; _parse(cond, parse_expression(p));
@@ -440,7 +449,7 @@ ASTNode* parse_statement(Parser* p) {
             return NULL;
         }
 
-        return create_while(cond, body, l_while);
+        return create_while(cond, body, l_while->row, l_while->col, l_while->length);
     }
 
     if (match(p, FOR)) {
@@ -468,6 +477,8 @@ ASTNode* parse_statement(Parser* p) {
 
 ASTNode* parse_var_decl(Parser* p) {
     int l_type = get_token_line(p);
+    int c_type = current(p)->col;
+    int len_type = current(p)->length;
 
     ASTNode* ast_type; _parse(ast_type, parse_type(p));
 
@@ -480,7 +491,7 @@ ASTNode* parse_var_decl(Parser* p) {
             advance(p); // consume the comma that must exist after the loop condition
             // copy the type into a new type node for this new declaration
             // the type's line will always be constant
-            ast_type = create_type(ast_type->is_mut, ast_type->token_type, l_type);
+            ast_type = create_type(ast_type->is_mut, ast_type->token_type, l_type, c_type, len_type);
         }
         first = false;
 
@@ -493,13 +504,13 @@ ASTNode* parse_var_decl(Parser* p) {
             _parse_go(init, parse_expression(p), err_decls);
         }
 
-        ASTNode* decl = create_var_decl(ast_type, name_tok->start, init, name_tok->line);
+        ASTNode* decl = create_var_decl(ast_type, name_tok->start, init, name_tok->row, name_tok->col, name_tok->length);
 
         Symbol* sym = symtab_insert(p->symtab, name_tok->start, decl, init != NULL);
         if (sym == NULL) {
             p->panic_mode = true;
             p->errors++;
-            error_report(name_tok->line, "Parser",
+            error_report(name_tok->row, "Parser",
                     "duplicate variable declaration (%s)\n",
                     name_tok->start);
             goto err_decls;
@@ -519,7 +530,7 @@ ASTNode* parse_var_decl(Parser* p) {
 
     // if we have multiple declarations on this line, then return it as a block of declarations
     // the scope will just be the same level scope as the current symtab
-    return create_block(decls, count, p->symtab, l_type);
+    return create_block(decls, count, p->symtab, l_type, c_type, len_type);
 
 err_decls:
     for (int i = 0; i < count; i++) { free_ast(decls[i]); decls[i] = NULL; }
@@ -554,7 +565,7 @@ ASTNode* parse_assignment(Parser* p) {
             return NULL;
         }
 
-        ASTNode* assign = create_assign(left->identifier, value, l_walrus->line);
+        ASTNode* assign = create_assign(left->identifier, value, l_walrus->row, l_walrus->col, l_walrus->length);
 
         // no longer need left node or its string data because it will be packed
         // into the assign node with value being what is being assigned
@@ -576,7 +587,7 @@ ASTNode* parse_logic_or(Parser* p) {
             free_ast(left);
             return NULL;
         }
-        left = create_bin_op(OR, left, right, l_logor->line);
+        left = create_bin_op(OR, left, right, l_logor->row, l_logor->col, l_logor->length);
     }
     return left;
 }
@@ -591,7 +602,7 @@ ASTNode* parse_logic_and(Parser* p) {
             free_ast(left);
             return NULL;
         }
-        left = create_bin_op(AND, left, right, l_logand->line);
+        left = create_bin_op(AND, left, right, l_logand->row, l_logand->col, l_logand->length);
     }
     return left;
 }
@@ -607,7 +618,7 @@ ASTNode* parse_equality(Parser* p) {
             free_ast(left);
             return NULL;
         }
-        left = create_bin_op(op, left, right, l_op->line);
+        left = create_bin_op(op, left, right, l_op->row, l_op->col, l_op->length);
     }
     return left;
 }
@@ -623,7 +634,7 @@ ASTNode* parse_comparison(Parser* p) {
             free_ast(left);
             return NULL;
         }
-        left = create_bin_op(op, left, right, l_op->line);
+        left = create_bin_op(op, left, right, l_op->row, l_op->col, l_op->length);
     }
     return left;
 }
@@ -639,7 +650,7 @@ ASTNode* parse_additive(Parser* p) {
             free_ast(left);
             return NULL;
         }
-        left = create_bin_op(op, left, right, l_op->line);
+        left = create_bin_op(op, left, right, l_op->row, l_op->col, l_op->length);
     }
     return left;
 }
@@ -655,12 +666,12 @@ ASTNode* parse_multiplicative(Parser* p) {
             free_ast(left);
             return NULL;
         }
-        left = create_bin_op(op, left, right, l_op->line);
+        left = create_bin_op(op, left, right, l_op->row, l_op->col, l_op->length);
     }
     return left;
 }
 
-ASTNode* parse_func_call(Parser* p, const char* name, int line) {
+ASTNode* parse_func_call(Parser* p, const char* name, int line, int col, int len) {
     _consume(p, LPAREN, "Expected '(' for function call args");
     ASTNode** args = NULL;
     int arg_count = 0;
@@ -678,7 +689,7 @@ ASTNode* parse_func_call(Parser* p, const char* name, int line) {
         advance(p);
     }
     _consume_go(p, RPAREN, "Expected ')' after arguments", err_args);
-    return create_func_call(name, args, arg_count, line);
+    return create_func_call(name, args, arg_count, line, col, len);
 
 err_args:
     for (int i = 0; i < arg_count; i++) { free_ast(args[i]); args[i] = NULL; }
@@ -709,10 +720,10 @@ ASTNode* parse_primary(Parser* p) {
 
             // check if function call on this identifier and handle
             if (match(p, LPAREN)) {
-                return parse_func_call(p, name, tok->line);
+                return parse_func_call(p, name, tok->row, tok->col, tok->length);
             }
             // otherwise is just an identifier
-            return create_identifier(name, tok->line);
+            return create_identifier(name, tok->row, tok->col, tok->length);
         }
         case INT_LITERAL:
         case FLOAT_LITERAL:
@@ -721,7 +732,7 @@ ASTNode* parse_primary(Parser* p) {
         case TRUE:
         case FALSE:
         case NULL_: {
-            return create_literal(advance(p), tok->line);
+            return create_literal(advance(p), tok->row, tok->col, tok->length);
         }
         case LPAREN: {
             advance(p);
@@ -738,7 +749,7 @@ ASTNode* parse_primary(Parser* p) {
             if (ad == NULL) return NULL;
             TokenType op = ad->type;
             ASTNode* operand; _parse(operand, parse_primary(p));
-            return create_unary_op(op, operand, tok->line);
+            return create_unary_op(op, operand, tok->row, tok->col, tok->length);
         }
         default:
             p->panic_mode = true;
@@ -771,6 +782,6 @@ ASTNode* parse_type(Parser* p) {
     }
 
     advance(p); // consume the type
-    return create_type(mut, tok->type, tok->line);
+    return create_type(mut, tok->type, tok->row, tok->col, tok->length);
 }
 

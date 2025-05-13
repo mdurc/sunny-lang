@@ -1,6 +1,17 @@
 #include "type_checker.h"
 #include "error.h"
-#include "type_cast_util.c"
+
+bool can_implicit_cast(TokenType from, TokenType to) {
+    if (from == to) return true;
+    if (from == STRING && to == STRING) return true;
+    if (is_numeric(from) && is_numeric(to)) return true;
+
+    if (from == BOOL && is_numeric(to)) return true;
+    if (is_numeric(from) && to == BOOL) return true;
+
+    if (from == CHAR_LITERAL && is_numeric(to)) return true;
+    return false;
+}
 
 void typecheck_program(ASTNode* program, Parser* parser) {
     if (program->node_type != NODE_BLOCK) return;
@@ -74,7 +85,7 @@ void typecheck_node(ASTNode* node, TypeChecker* ctx) {
         case NODE_BREAK:
         case NODE_CONTINUE:
             if (!ctx->in_loop) {
-                error_report(node->line, "TypeChecker", "'%s' statement outside of a loop\n",
+                error_report(node->row, "TypeChecker", "'%s' statement outside of a loop\n",
                              node->node_type == NODE_BREAK ? "break" : "continue");
                 ctx->parser->errors++;
             }
@@ -83,7 +94,7 @@ void typecheck_node(ASTNode* node, TypeChecker* ctx) {
             // ERROR -- there must have been some context-sensitive rule
             // that was broken (i.e. break/continue outside of a loop
             // or return outside of a function)
-            fatal_error(node->line, "TypeChecker", "unknown starting statement here in context\n");
+            fatal_error(node->row, "TypeChecker", "unknown starting statement here in context\n");
             break;
     }
 }
@@ -133,7 +144,7 @@ void typecheck_func_decl(ASTNode* node, TypeChecker* ctx) {
         return_type = return_param_node->param.type->token_type;
         Symbol* sym = symtab_lookup(ctx->symtab, return_param_node->param.name);
         if (!sym) {
-            error_report(node->line, "TypeChecker", "Return variable '%s' not declared\n", return_param_node->param.name);
+            error_report(node->row, "TypeChecker", "Return variable '%s' not declared\n", return_param_node->param.name);
             ctx->parser->errors++;
             ctx->symtab = previous_symtab;
             return;
@@ -141,7 +152,7 @@ void typecheck_func_decl(ASTNode* node, TypeChecker* ctx) {
     } else if (return_param_node->node_type == NODE_PRIMITIVE && return_param_node->token_type == U0) {
         return_type = return_param_node->token_type;
     } else {
-        error_report(node->line, "TypeChecker", "Malformed return type for function '%s'\n", node->func_decl.name);
+        error_report(node->row, "TypeChecker", "Malformed return type for function '%s'\n", node->func_decl.name);
         ctx->parser->errors++;
         ctx->symtab = previous_symtab;
         return;
@@ -160,7 +171,7 @@ void typecheck_func_decl(ASTNode* node, TypeChecker* ctx) {
         const char* return_var_name = return_param_node->param.name;
         bool all_paths_valid = check_all_paths_return(node->func_decl.body, ctx, return_var_name, false);
         if (!all_paths_valid) {
-            error_report(node->line, "TypeChecker",
+            error_report(node->row, "TypeChecker",
                        "Not all code paths assign return variable '%s' or contain explicit return\n",
                        return_var_name);
             ctx->parser->errors++;
@@ -177,14 +188,14 @@ void typecheck_func_decl(ASTNode* node, TypeChecker* ctx) {
 void typecheck_function_call(ASTNode* call, TypeChecker* ctx) {
     Symbol* sym = symtab_lookup(ctx->symtab, call->func_decl.name);
     if (!sym) {
-        error_report(call->line, "TypeChecker", "Undeclared function (%s)\n", call->func_decl.name);
+        error_report(call->row, "TypeChecker", "Undeclared function (%s)\n", call->func_decl.name);
         ctx->parser->errors++;
         return;
     }
 
     ASTNode* func_decl_ast = sym->ast_node;
     if (!func_decl_ast || func_decl_ast->node_type != NODE_FUNC_DECL) {
-        error_report(call->line, "TypeChecker", "Invalid function declaration\n");
+        error_report(call->row, "TypeChecker", "Invalid function declaration\n");
         ctx->parser->errors++;
         return;
     }
@@ -192,7 +203,7 @@ void typecheck_function_call(ASTNode* call, TypeChecker* ctx) {
     int expected_args = func_decl_ast->func_decl.param_count;
     int actual_args = call->func_decl.param_count;
     if (actual_args != expected_args) {
-        error_report(call->line, "TypeChecker", "Function '%s' expects %d arguments, got %d\n",
+        error_report(call->row, "TypeChecker", "Function '%s' expects %d arguments, got %d\n",
                      call->func_decl.name, expected_args, actual_args);
         ctx->parser->errors++;
         return;
@@ -207,7 +218,7 @@ void typecheck_function_call(ASTNode* call, TypeChecker* ctx) {
         TokenType expected_type = param->param.type->token_type;
 
         if (!can_implicit_cast(arg->resolved_state.token_type, expected_type)) {
-            error_report(call->line, "TypeChecker",
+            error_report(call->row, "TypeChecker",
                         "Argument %d type mismatch in '%s': expected %s, got %s\n",
                         i + 1, call->func_decl.name,
                         tok_string(expected_type),
@@ -243,7 +254,7 @@ void typecheck_assign_expr(ASTNode* decl_node, ASTNode* expr, TypeChecker* ctx) 
     TokenType rhs_type = expr->resolved_state.token_type;
 
     if (!can_implicit_cast(rhs_type, decl_type)) {
-        error_report(decl_node->line, "TypeChecker",
+        error_report(decl_node->row, "TypeChecker",
                 "Variable '%s' type mismatch: declared %s, initialized/assigned with %s\n",
                 decl_node->var_decl.name, tok_string(decl_type), tok_string(rhs_type));
         ctx->parser->errors++;
@@ -254,7 +265,7 @@ void typecheck_assign_expr(ASTNode* decl_node, ASTNode* expr, TypeChecker* ctx) 
 void resolve_identifier_type(ASTNode* node, TypeChecker* ctx) {
     Symbol* sym = symtab_lookup(ctx->symtab, node->identifier);
     if (!sym) {
-        error_report(node->line, "TypeChecker", "Undeclared variable '%s'\n", node->identifier);
+        error_report(node->row, "TypeChecker", "Undeclared variable '%s'\n", node->identifier);
         return; // resolved type stays as EOF_
     }
     // we access the ast node that is a part of the symbol table, which must
@@ -267,7 +278,7 @@ void typecheck_if(ASTNode* node, TypeChecker* ctx) {
     typecheck_node(node->if_stmt.cond, ctx);
     TokenType resolved_t = node->if_stmt.cond->resolved_state.token_type;
     if (!can_implicit_cast(resolved_t, BOOL)) {
-        error_report(node->line, "TypeChecker",
+        error_report(node->row, "TypeChecker",
                 "Condition of 'if' statement must be a boolean or a non-zero integer, got %s\n",
                  tok_string(resolved_t));
         ctx->parser->errors++;
@@ -286,7 +297,7 @@ void typecheck_while(ASTNode* node, TypeChecker* ctx) {
     typecheck_node(node->if_stmt.cond, ctx);
     TokenType resolved_t = node->if_stmt.cond->resolved_state.token_type;
     if (!can_implicit_cast(resolved_t, BOOL)) {
-        error_report(node->line, "TypeChecker", "Condition of 'while' loop must be a boolean, got %s\n",
+        error_report(node->row, "TypeChecker", "Condition of 'while' loop must be a boolean, got %s\n",
                      tok_string(resolved_t));
         ctx->parser->errors++;
     }
@@ -311,7 +322,7 @@ void typecheck_for(ASTNode* node, TypeChecker* ctx) {
         typecheck_node(end_node, ctx);
         TokenType resolved_t = node->for_stmt.end_expr->resolved_state.token_type;
         if (!can_implicit_cast(resolved_t, BOOL)) {
-            error_report(node->line, "TypeChecker", "Condition of 'for' loop must be a boolean, got %s\n",
+            error_report(node->row, "TypeChecker", "Condition of 'for' loop must be a boolean, got %s\n",
                     tok_string(resolved_t));
             ctx->parser->errors++;
         }
@@ -332,7 +343,7 @@ void typecheck_for(ASTNode* node, TypeChecker* ctx) {
 void typecheck_assign(ASTNode* node, TypeChecker* ctx) {
     Symbol* sym = symtab_lookup(ctx->symtab, node->var_decl.name);
     if (!sym) {
-        error_report(node->line, "TypeChecker",
+        error_report(node->row, "TypeChecker",
                 "Undeclared variable '%s' in assignment\n",
                 node->var_decl.name);
         ctx->parser->errors++;
@@ -345,7 +356,7 @@ void typecheck_assign(ASTNode* node, TypeChecker* ctx) {
 
     if (!type_node->is_mut) {
         if (sym->is_initialized) {
-            error_report(node->line, "TypeChecker",
+            error_report(node->row, "TypeChecker",
                     "Cannot assign again to immutable variable '%s'\n",
                     decl_node->var_decl.name);
             ctx->parser->errors++;
@@ -358,7 +369,7 @@ void typecheck_assign(ASTNode* node, TypeChecker* ctx) {
     // Now we go back to the "assign" ast node
     ASTNode* expr = node->var_decl.init_value;
     if (expr == NULL) {
-        error_report(node->line, "TypeChecker",
+        error_report(node->row, "TypeChecker",
                 "Requires an expression to assign to identifier %s\n",
                 node->var_decl.name);
         ctx->parser->errors++;
@@ -391,7 +402,7 @@ void resolve_literal_type(ASTNode* node, TypeChecker* ctx) {
             node->resolved_state.token_type = U0;
             break;
         default:
-            error_report(node->line, "TypeChecker", "Unknown literal type for resolution\n");
+            error_report(node->row, "TypeChecker", "Unknown literal type for resolution\n");
             ctx->parser->errors++;
             node->resolved_state.token_type = EOF_;
             break;
@@ -408,7 +419,7 @@ void typecheck_print(ASTNode* node, TypeChecker* ctx) {
         return; // OK
     }
 
-    error_report(node->line, "TypeChecker",
+    error_report(node->row, "TypeChecker",
             "Cannot print an expression with type %s\n",
             tok_string(operand->resolved_state.token_type));
     ctx->parser->errors++;
@@ -416,7 +427,7 @@ void typecheck_print(ASTNode* node, TypeChecker* ctx) {
 
 void typecheck_return(ASTNode* node, TypeChecker* ctx) {
     if (ctx->current_return_type == EOF_) {
-        error_report(node->line, "TypeChecker", "'return' statement outside of a function\n");
+        error_report(node->row, "TypeChecker", "'return' statement outside of a function\n");
         ctx->parser->errors++;
         return;
     }
@@ -426,13 +437,13 @@ void typecheck_return(ASTNode* node, TypeChecker* ctx) {
         TokenType t1 = node->unary_op.operand->resolved_state.token_type;
         TokenType t2 = ctx->current_return_type;
         if (!can_implicit_cast(t1, t2)) {
-            error_report(node->line, "TypeChecker", "Return type mismatch: expected %s, got %s\n",
+            error_report(node->row, "TypeChecker", "Return type mismatch: expected %s, got %s\n",
                          tok_string(ctx->current_return_type),
                          tok_string(node->unary_op.operand->resolved_state.token_type));
             ctx->parser->errors++;
         }
     } else if (ctx->current_return_type != U0) {
-        error_report(node->line, "TypeChecker",
+        error_report(node->row, "TypeChecker",
                 "Function expected to return %s, but 'return' statement has no value\n",
                      tok_string(ctx->current_return_type));
         ctx->parser->errors++;
@@ -440,7 +451,7 @@ void typecheck_return(ASTNode* node, TypeChecker* ctx) {
 }
 
 void type_error(TypeChecker* ctx, bool bin_op, ASTNode* node, const char* requirement, TokenType lt, TokenType rt) {
-    error_report(node->line, "TypeChecker",
+    error_report(node->row, "TypeChecker",
                "Operands of '%s' must be %s, got %s and %s\n",
                tok_string(bin_op ? node->bin_op.op : node->unary_op.op),
                requirement, tok_string(lt), tok_string(rt));
@@ -513,7 +524,7 @@ void typecheck_bin_op(ASTNode* node, TypeChecker* ctx) {
         }
 
         default:
-            error_report(node->line, "TypeChecker", "Unknown binary operator %s\n", tok_string(op));
+            error_report(node->row, "TypeChecker", "Unknown binary operator %s\n", tok_string(op));
             ctx->parser->errors++;
             break;
     }
@@ -554,7 +565,7 @@ void typecheck_unary_op(ASTNode* node, TypeChecker* ctx) {
             break;
 
         default:
-            error_report(node->line, "TypeChecker", "Unknown unary operator %s\n", tok_string(op));
+            error_report(node->row, "TypeChecker", "Unknown unary operator %s\n", tok_string(op));
             ctx->parser->errors++;
             break;
     }
