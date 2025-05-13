@@ -10,12 +10,12 @@ FuncCall            = IDENTIFIER "(" Args? ")"
 Args                = Expr ("," Expr)*
 
 
-Stmt                = ReturnStmt | PrintStmt | IfStmt | WhileStmt | ForStmt | VarDecl | ExprStmt | Block | "break" | "continue"
+Stmt                = ReturnStmt | PrintStmt | IfStmt | WhileStmt | ForStmt | VarDecl | ExprStmt | Block | ("break" ";") | ("continue" ";")
 ReturnStmt          = "return" Expr? ";"
 PrintStmt           = "print" Expr ";"
 IfStmt              = "if" "(" Expr ")" Block ("else" Block)?
 WhileStmt           = "while" "(" Expr ")" Block
-ForStmt             = "for" "(" (VarDecl | ExprStmt) ";" Expr? ";" Expr? ")" Block
+ForStmt             = "for" "(" (VarDecl | ExprStmt | ";") Expr? ";" Expr? ")" Block
 VarDecl             = Type IDENTIFIER (":=" Expr)? ("," IDENTIFIER (":=" Expr)?)* ";"
 ExprStmt            = Expr ";"
 
