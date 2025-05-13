@@ -1,0 +1,108 @@
+Generated AST:
+Block (10 statements) at line -1:
+  Binary Operation: + at line 1
+    Binary Operation: + at line 1
+      Integer Literal: 5 at line 1
+      Integer Literal: 2 at line 1
+    Integer Literal: 3 at line 1
+  Binary Operation: - at line 3
+    Integer Literal: 1 at line 3
+    Binary Operation: * at line 3
+      Integer Literal: 2 at line 3
+      Integer Literal: 3 at line 3
+  Binary Operation: * at line 5
+    Integer Literal: 3 at line 5
+    Binary Operation: + at line 5
+      Integer Literal: 8 at line 5
+      Integer Literal: 2 at line 5
+  Block (4 statements) at line 7:
+    Variable Declaration at line 7:
+      Name: a
+      Type:
+        Primitive: u8 at line 7
+      Initial Value: NULL
+    Variable Declaration at line 7:
+      Name: b
+      Type:
+        Primitive: u8 at line 7
+      Initial Value: NULL
+    Variable Declaration at line 7:
+      Name: c
+      Type:
+        Primitive: u8 at line 7
+      Initial Value: NULL
+    Variable Declaration at line 7:
+      Name: d
+      Type:
+        Primitive: u8 at line 7
+      Initial Value: NULL
+  Variable Assignment at line 8:
+    Name: a
+    New Value:
+      Variable Assignment at line 8:
+        Name: b
+        New Value:
+          Identifier: c at line 8
+  Binary Operation: < at line 10
+    Binary Operation: + at line 10
+      Identifier: a at line 10
+      Identifier: b at line 10
+    Binary Operation: + at line 10
+      Identifier: c at line 10
+      Identifier: d at line 10
+  Binary Operation: = at line 11
+    Binary Operation: or at line 11
+      Binary Operation: != at line 11
+        Identifier: a at line 11
+        Integer Literal: 0 at line 11
+      Binary Operation: != at line 11
+        Identifier: b at line 11
+        Integer Literal: 0 at line 11
+    Binary Operation: and at line 11
+      Binary Operation: != at line 11
+        Identifier: c at line 11
+        Integer Literal: 0 at line 11
+      Binary Operation: != at line 11
+        Identifier: d at line 11
+        Integer Literal: 0 at line 11
+  Block (4 statements) at line 13:
+    Variable Declaration at line 13:
+      Name: e
+      Type:
+        Primitive: bool at line 13
+      Initial Value: NULL
+    Variable Declaration at line 13:
+      Name: f
+      Type:
+        Primitive: bool at line 13
+      Initial Value: NULL
+    Variable Declaration at line 13:
+      Name: g
+      Type:
+        Primitive: bool at line 13
+      Initial Value: NULL
+    Variable Declaration at line 13:
+      Name: h
+      Type:
+        Primitive: bool at line 13
+      Initial Value: NULL
+  Variable Assignment at line 14:
+    Name: e
+    New Value:
+      Variable Assignment at line 14:
+        Name: f
+        New Value:
+          Variable Assignment at line 14:
+            Name: g
+            New Value:
+              Variable Assignment at line 14:
+                Name: h
+                New Value:
+                  Boolean Literal: true at line 14
+  Binary Operation: = at line 15
+    Binary Operation: or at line 15
+      Identifier: e at line 15
+      Identifier: f at line 15
+    Binary Operation: and at line 15
+      Identifier: g at line 15
+      Identifier: h at line 15

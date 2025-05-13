@@ -15,13 +15,13 @@ ReturnStmt          = "return" Expr? ";"
 PrintStmt           = "print" Expr ";"
 IfStmt              = "if" "(" Expr ")" Block ("else" Block)?
 WhileStmt           = "while" "(" Expr ")" Block
-ForStmt             = "for" "(" (VarDecl | ExprStmt | ";") Expr? ";" Expr? ")" Block
+ForStmt             = "for" "(" (VarDecl | ExprStmt) ";" Expr? ";" Expr? ")" Block
 VarDecl             = Type IDENTIFIER (":=" Expr)? ("," IDENTIFIER (":=" Expr)?)* ";"
 ExprStmt            = Expr ";"
 
 
-Expr                = AssignExpr
-AssignExpr          = IDENTIFIER ":=" AssignExpr | LogicalOrExpr
+Expr                = AssignExpr | LogicalOrExpr
+AssignExpr          = IDENTIFIER ":=" Expr
 LogicalOrExpr       = LogicalAndExpr ("or" LogicalAndExpr)*
 LogicalAndExpr      = EqualityExpr ("and" EqualityExpr)*
 EqualityExpr        = ComparisonExpr (("=" | "!=") ComparisonExpr)*
@@ -33,7 +33,7 @@ UnaryExpr           = ("!" | "-") PrimaryExpr
 
 
 Literal             = INT_LITERAL | FLOAT_LITERAL | STRING_LITERAL | CHAR_LITERAL | "null" | "true" | "false"
-Type                = ("mut")? ("u0" | "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" | "f64")
+Type                = ("mut")? ("u0" | "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" | "f64" | "String" | "bool")
 ```
 #### NOTES:
 + The recursive descent parser format (top down) where the outermost grammar (Expr) works its way down into the nested subexpressions before reaching the leaves which are the primary. This is ordered in precedence.

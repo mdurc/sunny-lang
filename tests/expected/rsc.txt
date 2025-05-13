@@ -1,0 +1,77 @@
+Generated AST:
+Block (11 statements) at line -1:
+  Variable Declaration at line 2:
+    Name: foo
+    Type:
+      Primitive: mut u8 at line 2
+    Initial Value:
+      Integer Literal: 4 at line 2
+  Variable Declaration at line 3:
+    Name: bar
+    Type:
+      Primitive: u8 at line 3
+    Initial Value:
+      Integer Literal: 8 at line 3
+  Variable Assignment at line 4:
+    Name: foo
+    New Value:
+      Identifier: bar at line 4
+  Variable Declaration at line 5:
+    Name: my_float
+    Type:
+      Primitive: f64 at line 5
+    Initial Value:
+      Float Literal: 3.140000 at line 5
+  Variable Declaration at line 7:
+    Name: str
+    Type:
+      Primitive: String at line 7
+    Initial Value:
+      String Literal: "this is a string" at line 7
+  Variable Declaration at line 8:
+    Name: my_bool
+    Type:
+      Primitive: bool at line 8
+    Initial Value: NULL
+  Variable Assignment at line 9:
+    Name: my_bool
+    New Value:
+      Boolean Literal: true at line 9
+  Variable Declaration at line 11:
+    Name: my_char_lit
+    Type:
+      Primitive: u8 at line 11
+    Initial Value:
+      Char Literal (ascii): 97 at line 11
+  Function: ADD at line 14
+    Return Type:
+      Parameter: z at line 14
+        Type:
+          Primitive: u8 at line 14
+    Parameters (2):
+      Parameter: x at line 14
+        Type:
+          Primitive: u8 at line 14
+      Parameter: y at line 14
+        Type:
+          Primitive: u8 at line 14
+    Body:
+      Block (1 statements) at line 15:
+        Variable Assignment at line 16:
+          Name: z
+          New Value:
+            Binary Operation: + at line 16
+              Identifier: x at line 16
+              Identifier: y at line 16
+  Function: FOO at line 21
+    Return Type:
+      Primitive: u0 at line 21
+    Parameters (0):
+    Body:
+      Block (1 statements) at line 22:
+        Print Statement at line 23:
+          String Literal: "this is a void function with no return type" at line 23
+  Function Call: ADD at line 27
+    Arguments (2) at line 27:
+      Integer Literal: 5 at line 27
+      Integer Literal: 2 at line 27

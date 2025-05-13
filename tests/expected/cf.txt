@@ -1,0 +1,131 @@
+Generated AST:
+Block (8 statements) at line -1:
+  Variable Declaration at line 1:
+    Name: x
+    Type:
+      Primitive: mut u8 at line 1
+    Initial Value:
+      Integer Literal: 0 at line 1
+  Variable Declaration at line 2:
+    Name: y
+    Type:
+      Primitive: mut u8 at line 2
+    Initial Value:
+      Integer Literal: 10 at line 2
+  Variable Declaration at line 3:
+    Name: condition
+    Type:
+      Primitive: bool at line 3
+    Initial Value:
+      Boolean Literal: true at line 3
+  If Statement at line 5:
+    Condition:
+      Binary Operation: and at line 5
+        Binary Operation: < at line 5
+          Identifier: x at line 5
+          Identifier: y at line 5
+        Identifier: condition at line 5
+    Then Block:
+      Block (2 statements) at line 5:
+        Print Statement at line 6:
+          String Literal: "first block" at line 6
+        Variable Assignment at line 7:
+          Name: x
+          New Value:
+            Binary Operation: + at line 7
+              Identifier: x at line 7
+              Integer Literal: 1 at line 7
+    Else Block:
+      Block (1 statements) at line 8:
+        If Statement at line 9:
+          Condition:
+            Binary Operation: or at line 9
+              Binary Operation: = at line 9
+                Identifier: x at line 9
+                Identifier: y at line 9
+              Unary Operation: ! at line 9
+                Identifier: condition at line 9
+          Then Block:
+            Block (1 statements) at line 9:
+              Print Statement at line 10:
+                String Literal: "second block" at line 10
+          Else Block:
+            Block (1 statements) at line 11:
+              Print Statement at line 12:
+                String Literal: "third block" at line 12
+  Variable Declaration at line 16:
+    Name: i
+    Type:
+      Primitive: mut u8 at line 16
+    Initial Value: NULL
+  For Loop at line 17:
+    Initialization:
+      Variable Assignment at line 17:
+        Name: i
+        New Value:
+          Integer Literal: 0 at line 17
+    End Condition:
+      Binary Operation: < at line 17
+        Identifier: i at line 17
+        Integer Literal: 5 at line 17
+    Iteration:
+      Variable Assignment at line 17:
+        Name: i
+        New Value:
+          Binary Operation: + at line 17
+            Identifier: i at line 17
+            Integer Literal: 1 at line 17
+    Body:
+      Block (1 statements) at line 17:
+        Print Statement at line 18:
+          Identifier: i at line 18
+  Block (1 statements) at line 21:
+    Print Statement at line 22:
+      String Literal: "this is an empty scope" at line 22
+  For Loop at line 25:
+    Initialization:
+      Variable Declaration at line 25:
+        Name: i
+        Type:
+          Primitive: mut u8 at line 25
+        Initial Value:
+          Integer Literal: 0 at line 25
+    End Condition:
+      Binary Operation: < at line 25
+        Identifier: i at line 25
+        Integer Literal: 10 at line 25
+    Iteration:
+      Variable Assignment at line 25:
+        Name: i
+        New Value:
+          Binary Operation: + at line 25
+            Identifier: i at line 25
+            Integer Literal: 1 at line 25
+    Body:
+      Block (2 statements) at line 25:
+        If Statement at line 26:
+          Condition:
+            Binary Operation: = at line 26
+              Identifier: i at line 26
+              Integer Literal: 5 at line 26
+          Then Block:
+            Block (1 statements) at line 26:
+              Break Statement at line 27
+          Else Block:
+            Block (1 statements) at line 28:
+              If Statement at line 29:
+                Condition:
+                  Binary Operation: = at line 29
+                    Binary Operation: % at line 29
+                      Identifier: i at line 29
+                      Integer Literal: 2 at line 29
+                    Integer Literal: 0 at line 29
+                Then Block:
+                  Block (1 statements) at line 29:
+                    Continue Statement at line 30
+        Variable Declaration at line 33:
+          Name: new_var
+          Type:
+            Primitive: u8 at line 33
+          Initial Value:
+            Integer Literal: 3 at line 33
