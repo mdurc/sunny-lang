@@ -73,8 +73,7 @@ typedef enum {
 typedef struct {
     TokenType type;
     char* start; // source text from program
-    int length; // length of lexeme string
-    int row, col;
+    int row, col, len; // len is length of the start string source text
 
     union {
         uint64_t int_val;
@@ -90,9 +89,10 @@ bool is_float(TokenType t);
 bool is_primitive(TokenType t);
 bool is_literal(TokenType t);
 
-void lex_file(FILE* fp, Token*** tokens, int* token_count, int* token_capacity);
+void lex_file(FILE* fp, Token*** tokens, int* token_count);
 void free_token_data(Token* token);
 
+Token* copy_token(Token* src);
 Token* create_lexeme_token(TokenType type, const char* lexeme, int line, int col);
 int put_keyword_indentifier_token(Token*** tokens, int* token_count,
         int* token_capacity, FILE* fp, char c, int line, int col);

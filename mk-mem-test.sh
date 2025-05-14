@@ -5,4 +5,4 @@ if [ "$#" -ne 1 ]; then
     exit 1
 fi
 
-make clean && make && leaks --atExit -- ./a.out "$1"
+make clean && make && leaks --atExit -- ./compile.out "$1"

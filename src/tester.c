@@ -15,8 +15,7 @@ void run_test(const char* test_str) {
 
     Token** tokens = NULL;
     int token_count = 0;
-    int capacity = 0;
-    lex_file(fp, &tokens, &token_count, &capacity);
+    lex_file(fp, &tokens, &token_count);
     fclose(fp);
 
     for (int i = 0; i < token_count; i++){
@@ -80,7 +79,20 @@ int main(int argc, char** argv){
     //run_test("u8 my_number := 13 >= 3 < 1 <= 3 >= 2 != 1;");
     //run_test("f64 hi := 3.14;");
     //run_test("func ADD(u8 x, u8 y) { }");
-    run_test("help// help \n me");
+    /*
+
+i32 c := 3;
+
+u8 cc := "hi";
+
+{
+    for (;;) {
+        print "hi\n";
+    }
+}
+
+   */
+    run_test("\ni32 c := 3;\n\nu8 cc := \"hi\";\n\n{\n    for (;;) {\n        print \"hi\\n\";\n    }\n}\n\n");
     //run_test("if (true) { }");
 
     return 0;

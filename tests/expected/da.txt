@@ -1,114 +1,114 @@
 Generated AST:
 Block (18 statements) at line -1:
-  Variable Declaration at line 1:
+  Variable Declaration at line 0:
     Name: d
+    Type:
+      Primitive: u8 at line 0
+    Initial Value:
+      Integer Literal: 0 at line 0
+  Variable Declaration at line 1:
+    Name: e
     Type:
       Primitive: u8 at line 1
     Initial Value:
-      Integer Literal: 0 at line 1
+      Integer Literal: 123 at line 1
   Variable Declaration at line 2:
-    Name: e
-    Type:
-      Primitive: u8 at line 2
-    Initial Value:
-      Integer Literal: 123 at line 2
-  Variable Declaration at line 3:
     Name: f
     Type:
-      Primitive: i8 at line 3
+      Primitive: i8 at line 2
     Initial Value:
-      Unary Operation: - at line 3
-        Integer Literal: 987 at line 3
-  Variable Declaration at line 4:
+      Unary Operation: - at line 2
+        Integer Literal: 987 at line 2
+  Variable Declaration at line 3:
     Name: p
     Type:
-      Primitive: u8 at line 4
+      Primitive: u8 at line 3
     Initial Value:
-      Binary Operation: - at line 4
-        Integer Literal: 9 at line 4
-        Integer Literal: 3 at line 4
-  Variable Declaration at line 5:
+      Binary Operation: - at line 3
+        Integer Literal: 9 at line 3
+        Integer Literal: 3 at line 3
+  Variable Declaration at line 4:
     Name: o
     Type:
-      Primitive: i8 at line 5
+      Primitive: i8 at line 4
     Initial Value:
-      Unary Operation: - at line 5
-        Identifier: p at line 5
-  Variable Declaration at line 7:
+      Unary Operation: - at line 4
+        Identifier: p at line 4
+  Variable Declaration at line 6:
     Name: a_b
+    Type:
+      Primitive: String at line 6
+    Initial Value:
+      String Literal: "abc" at line 6
+  Variable Declaration at line 7:
+    Name: _bc
     Type:
       Primitive: String at line 7
     Initial Value:
-      String Literal: "abc" at line 7
-  Variable Declaration at line 8:
-    Name: _bc
-    Type:
-      Primitive: String at line 8
-    Initial Value:
-      Identifier: a_b at line 8
-  Variable Declaration at line 10:
+      Identifier: a_b at line 7
+  Variable Declaration at line 9:
     Name: g
+    Type:
+      Primitive: f64 at line 9
+    Initial Value:
+      Float Literal: 3.140000 at line 9
+  Variable Declaration at line 10:
+    Name: h
     Type:
       Primitive: f64 at line 10
     Initial Value:
-      Float Literal: 3.140000 at line 10
-  Variable Declaration at line 11:
-    Name: h
-    Type:
-      Primitive: f64 at line 11
-    Initial Value:
-      Unary Operation: - at line 11
-        Float Literal: 0.001000 at line 11
-  Variable Declaration at line 15:
+      Unary Operation: - at line 10
+        Float Literal: 0.001000 at line 10
+  Variable Declaration at line 14:
     Name: i
     Type:
-      Primitive: u8 at line 15
+      Primitive: u8 at line 14
     Initial Value:
-      Integer Literal: 31 at line 15
-  Variable Declaration at line 16:
+      Integer Literal: 31 at line 14
+  Variable Declaration at line 15:
     Name: j
     Type:
-      Primitive: u32 at line 16
+      Primitive: u32 at line 15
     Initial Value:
-      Integer Literal: 11259375 at line 16
-  Variable Declaration at line 17:
+      Integer Literal: 11259375 at line 15
+  Variable Declaration at line 16:
     Name: k
+    Type:
+      Primitive: u8 at line 16
+    Initial Value:
+      Integer Literal: 10 at line 16
+  Variable Declaration at line 17:
+    Name: l
     Type:
       Primitive: u8 at line 17
     Initial Value:
-      Integer Literal: 10 at line 17
+      Integer Literal: 13 at line 17
   Variable Declaration at line 18:
-    Name: l
-    Type:
-      Primitive: u8 at line 18
-    Initial Value:
-      Integer Literal: 13 at line 18
-  Variable Declaration at line 19:
     Name: m
+    Type:
+      Primitive: i8 at line 18
+    Initial Value:
+      Unary Operation: - at line 18
+        Integer Literal: 42 at line 18
+  Variable Declaration at line 19:
+    Name: n
     Type:
       Primitive: i8 at line 19
     Initial Value:
       Unary Operation: - at line 19
-        Integer Literal: 42 at line 19
-  Variable Declaration at line 20:
-    Name: n
-    Type:
-      Primitive: i8 at line 20
-    Initial Value:
-      Unary Operation: - at line 20
-        Integer Literal: 255 at line 20
-  Variable Declaration at line 25:
+        Integer Literal: 255 at line 19
+  Variable Declaration at line 24:
     Name: my_original
     Type:
-      Primitive: mut u8 at line 25
+      Primitive: mut u8 at line 24
     Initial Value:
-      Integer Literal: 3 at line 25
-  Variable Declaration at line 26:
+      Integer Literal: 3 at line 24
+  Variable Declaration at line 25:
     Name: new_variable
     Type:
-      Primitive: mut u8 at line 26
+      Primitive: mut u8 at line 25
     Initial Value: NULL
-  Variable Assignment at line 27:
+  Variable Assignment at line 26:
     Name: new_variable
     New Value:
-      Identifier: my_original at line 27
+      Identifier: my_original at line 26

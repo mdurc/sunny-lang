@@ -1,131 +1,131 @@
 Generated AST:
 Block (8 statements) at line -1:
-  Variable Declaration at line 1:
+  Variable Declaration at line 0:
     Name: x
+    Type:
+      Primitive: mut u8 at line 0
+    Initial Value:
+      Integer Literal: 0 at line 0
+  Variable Declaration at line 1:
+    Name: y
     Type:
       Primitive: mut u8 at line 1
     Initial Value:
-      Integer Literal: 0 at line 1
+      Integer Literal: 10 at line 1
   Variable Declaration at line 2:
-    Name: y
-    Type:
-      Primitive: mut u8 at line 2
-    Initial Value:
-      Integer Literal: 10 at line 2
-  Variable Declaration at line 3:
     Name: condition
     Type:
-      Primitive: bool at line 3
+      Primitive: bool at line 2
     Initial Value:
-      Boolean Literal: true at line 3
-  If Statement at line 5:
+      Boolean Literal: true at line 2
+  If Statement at line 4:
     Condition:
-      Binary Operation: and at line 5
-        Binary Operation: < at line 5
-          Identifier: x at line 5
-          Identifier: y at line 5
-        Identifier: condition at line 5
+      Binary Operation: and at line 4
+        Binary Operation: < at line 4
+          Identifier: x at line 4
+          Identifier: y at line 4
+        Identifier: condition at line 4
     Then Block:
-      Block (2 statements) at line 5:
-        Print Statement at line 6:
-          String Literal: "first block" at line 6
-        Variable Assignment at line 7:
+      Block (2 statements) at line 4:
+        Print Statement at line 5:
+          String Literal: "first block" at line 5
+        Variable Assignment at line 6:
           Name: x
           New Value:
-            Binary Operation: + at line 7
-              Identifier: x at line 7
-              Integer Literal: 1 at line 7
+            Binary Operation: + at line 6
+              Identifier: x at line 6
+              Integer Literal: 1 at line 6
     Else Block:
-      Block (1 statements) at line 8:
-        If Statement at line 9:
+      Block (1 statements) at line 7:
+        If Statement at line 8:
           Condition:
-            Binary Operation: or at line 9
-              Binary Operation: = at line 9
-                Identifier: x at line 9
-                Identifier: y at line 9
-              Unary Operation: ! at line 9
-                Identifier: condition at line 9
+            Binary Operation: or at line 8
+              Binary Operation: = at line 8
+                Identifier: x at line 8
+                Identifier: y at line 8
+              Unary Operation: ! at line 8
+                Identifier: condition at line 8
           Then Block:
-            Block (1 statements) at line 9:
-              Print Statement at line 10:
-                String Literal: "second block" at line 10
+            Block (1 statements) at line 8:
+              Print Statement at line 9:
+                String Literal: "second block" at line 9
           Else Block:
-            Block (1 statements) at line 11:
-              Print Statement at line 12:
-                String Literal: "third block" at line 12
-  Variable Declaration at line 16:
+            Block (1 statements) at line 10:
+              Print Statement at line 11:
+                String Literal: "third block" at line 11
+  Variable Declaration at line 15:
     Name: i
     Type:
-      Primitive: mut u8 at line 16
+      Primitive: mut u8 at line 15
     Initial Value: NULL
-  For Loop at line 17:
+  For Loop at line 16:
     Initialization:
-      Variable Assignment at line 17:
+      Variable Assignment at line 16:
         Name: i
         New Value:
-          Integer Literal: 0 at line 17
+          Integer Literal: 0 at line 16
     End Condition:
-      Binary Operation: < at line 17
-        Identifier: i at line 17
-        Integer Literal: 5 at line 17
+      Binary Operation: < at line 16
+        Identifier: i at line 16
+        Integer Literal: 5 at line 16
     Iteration:
-      Variable Assignment at line 17:
+      Variable Assignment at line 16:
         Name: i
         New Value:
-          Binary Operation: + at line 17
-            Identifier: i at line 17
-            Integer Literal: 1 at line 17
+          Binary Operation: + at line 16
+            Identifier: i at line 16
+            Integer Literal: 1 at line 16
     Body:
-      Block (1 statements) at line 17:
-        Print Statement at line 18:
-          Identifier: i at line 18
-  Block (1 statements) at line 21:
-    Print Statement at line 22:
-      String Literal: "this is an empty scope" at line 22
-  For Loop at line 25:
+      Block (1 statements) at line 16:
+        Print Statement at line 17:
+          Identifier: i at line 17
+  Block (1 statements) at line 20:
+    Print Statement at line 21:
+      String Literal: "this is an empty scope" at line 21
+  For Loop at line 24:
     Initialization:
-      Variable Declaration at line 25:
+      Variable Declaration at line 24:
         Name: i
         Type:
-          Primitive: mut u8 at line 25
+          Primitive: mut u8 at line 24
         Initial Value:
-          Integer Literal: 0 at line 25
+          Integer Literal: 0 at line 24
     End Condition:
-      Binary Operation: < at line 25
-        Identifier: i at line 25
-        Integer Literal: 10 at line 25
+      Binary Operation: < at line 24
+        Identifier: i at line 24
+        Integer Literal: 10 at line 24
     Iteration:
-      Variable Assignment at line 25:
+      Variable Assignment at line 24:
         Name: i
         New Value:
-          Binary Operation: + at line 25
-            Identifier: i at line 25
-            Integer Literal: 1 at line 25
+          Binary Operation: + at line 24
+            Identifier: i at line 24
+            Integer Literal: 1 at line 24
     Body:
-      Block (2 statements) at line 25:
-        If Statement at line 26:
+      Block (2 statements) at line 24:
+        If Statement at line 25:
           Condition:
-            Binary Operation: = at line 26
-              Identifier: i at line 26
-              Integer Literal: 5 at line 26
+            Binary Operation: = at line 25
+              Identifier: i at line 25
+              Integer Literal: 5 at line 25
           Then Block:
-            Block (1 statements) at line 26:
-              Break Statement at line 27
+            Block (1 statements) at line 25:
+              Break Statement at line 26
           Else Block:
-            Block (1 statements) at line 28:
-              If Statement at line 29:
+            Block (1 statements) at line 27:
+              If Statement at line 28:
                 Condition:
-                  Binary Operation: = at line 29
-                    Binary Operation: % at line 29
-                      Identifier: i at line 29
-                      Integer Literal: 2 at line 29
-                    Integer Literal: 0 at line 29
+                  Binary Operation: = at line 28
+                    Binary Operation: % at line 28
+                      Identifier: i at line 28
+                      Integer Literal: 2 at line 28
+                    Integer Literal: 0 at line 28
                 Then Block:
-                  Block (1 statements) at line 29:
-                    Continue Statement at line 30
-        Variable Declaration at line 33:
+                  Block (1 statements) at line 28:
+                    Continue Statement at line 29
+        Variable Declaration at line 32:
           Name: new_var
           Type:
-            Primitive: u8 at line 33
+            Primitive: u8 at line 32
           Initial Value:
-            Integer Literal: 3 at line 33
+            Integer Literal: 3 at line 32

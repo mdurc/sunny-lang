@@ -1,6 +1,7 @@
 - [x] Make more integer types with specific bit counts via c-ints (this is actually something to implement code gen because we already have type specifiers)
 - [x] Multi-line comments /\* \*/
-- [ ] Tree sitter highlighting
+- [x] Tree sitter highlighting
+- [x] LSP: Diagnostic, Goto-Definition, Hovering over identifiers and literals
 - [ ] Add pointers
 - [ ] Explore Pratt-Parsing for expressions to make precedence easier, instead of the current recursive-descent technique.
 - [x] Add break/continue statements

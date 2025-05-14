@@ -1,89 +1,13 @@
-Generated AST:
-Block (7 statements) at line -1:
-  Variable Declaration at line 2:
-    Name: x
-    Type:
-      Primitive: u8 at line 2
-    Initial Value:
-      Integer Literal: 10 at line 2
-  Variable Declaration at line 6:
-    Name: y
-    Type:
-      Primitive: mut u8 at line 6
-    Initial Value:
-      Integer Literal: 5 at line 6
-  Block (2 statements) at line 7:
-    Variable Declaration at line 8:
-      Name: y
-      Type:
-        Primitive: u8 at line 8
-      Initial Value:
-        Integer Literal: 7 at line 8
-    Print Statement at line 9:
-      Identifier: y at line 9
-  Print Statement at line 11:
-    Identifier: y at line 11
-  Function: SUM at line 17
-    Return Type:
-      Parameter: result at line 17
-        Type:
-          Primitive: u8 at line 17
-    Parameters (2):
-      Parameter: a at line 17
-        Type:
-          Primitive: u8 at line 17
-      Parameter: b at line 17
-        Type:
-          Primitive: u8 at line 17
-    Body:
-      Block (1 statements) at line 17:
-        Variable Assignment at line 18:
-          Name: result
-          New Value:
-            Binary Operation: + at line 18
-              Identifier: a at line 18
-              Identifier: b at line 18
-  Function: Valid at line 31
-    Return Type:
-      Parameter: out at line 31
-        Type:
-          Primitive: u8 at line 31
-    Parameters (1):
-      Parameter: x at line 31
-        Type:
-          Primitive: u8 at line 31
-    Body:
-      Block (2 statements) at line 31:
-        Variable Assignment at line 32:
-          Name: y
-          New Value:
-            Binary Operation: + at line 32
-              Identifier: x at line 32
-              Integer Literal: 1 at line 32
-        Variable Assignment at line 33:
-          Name: out
-          New Value:
-            Identifier: y at line 33
-  For Loop at line 37:
-    Initialization:
-      Variable Declaration at line 37:
-        Name: i
-        Type:
-          Primitive: mut u8 at line 37
-        Initial Value:
-          Integer Literal: 0 at line 37
-    End Condition:
-      Binary Operation: < at line 37
-        Identifier: i at line 37
-        Integer Literal: 3 at line 37
-    Iteration:
-      Variable Assignment at line 37:
-        Name: i
-        New Value:
-          Binary Operation: + at line 37
-            Identifier: i at line 37
-            Integer Literal: 1 at line 37
-    Body:
-      Block (1 statements) at line 37:
-        Print Statement at line 38:
-          Identifier: i at line 38
+[Error][line 2] in Parser: duplicate variable declaration (x)
+[Error][line 5] in Parser: duplicate function declaration (dupe)
+[Error][line 25] in Parser: duplicate variable declaration (param)
+[Error][line 28] in Parser: duplicate variable declaration within parameters (a)
+[Error][line 13] in TypeChecker: Undeclared variable 'y'
+[Error][line 13] in TypeChecker: Cannot print an expression with type _EOF_
+[Error][line 16] in TypeChecker: Undeclared variable 'foo' in assignment
+[Error][line 34] in TypeChecker: Undeclared variable 'y' in assignment
+[Error][line 35] in TypeChecker: Undeclared variable 'y'
+[Error][line 35] in TypeChecker: Variable 'out' type mismatch: declared u8, initialized/assigned with _EOF_
+[Error][line 42] in TypeChecker: Undeclared variable 'i'
+[Error][line 42] in TypeChecker: Cannot print an expression with type _EOF_
+Compilation failed with 12 errors and 0 warnings.

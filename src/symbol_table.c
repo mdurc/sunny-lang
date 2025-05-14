@@ -1,5 +1,4 @@
 #include "symbol_table.h"
-#include "error.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -37,6 +36,37 @@ void symtab_destroy_all(SymbolTable* root) {
     symtab_destroy(root);
 }
 
+static void collect_unique_depths(SymbolTable* node, int** depths, int* size, int* capacity) {
+    if (!node) return;
+    const int current_depth = node->scope_depth;
+    for (int i = 0; i < *size; i++) {
+        if ((*depths)[i] == current_depth) goto process_children;
+    }
+    if (*size >= *capacity) {
+        *capacity = (*capacity ? *capacity * 2 : 4);
+        *depths = realloc(*depths, *capacity * sizeof(int));
+    }
+    (*depths)[(*size)++] = current_depth;
+
+process_children:
+    for (int i = 0; i < node->children_count; i++) {
+        collect_unique_depths(node->children[i], depths, size, capacity);
+    }
+}
+
+// expects the caller to free the memory
+int* symtab_get_reachable_depths(SymbolTable* root, int* out_count) {
+    int* depths = NULL;
+    int size = 0, capacity = 0;
+    if (root) collect_unique_depths(root, &depths, &size, &capacity);
+    if (size > 0) {
+        int* tmp = realloc(depths, size * sizeof(int));
+        if (tmp) depths = tmp;
+    }
+    *out_count = size;
+    return depths;
+}
+
 // Caller will have to explicitly check for null and throw exception
 Symbol* symtab_insert(SymbolTable* st, const char* name, ASTNode* ast_node, bool is_initialized) {
     // check for existing symbol in current scope
@@ -68,13 +98,6 @@ Symbol* symtab_lookup(SymbolTable* st, const char* name) {
     while (current) {
         Symbol* sym = current->head;
         while (sym) {
-            if (sym == NULL) {
-                fatal_error(-1, "SymbolTable", "Null sym->name inserted");
-            } else if (sym->name == NULL) { // SEGFAULT ON THIS ACCESS
-                fatal_error(-1, "SymbolTable", "Null sym->name inserted");
-            } else if (name == NULL) {
-                fatal_error(-1, "SymbolTable", "Null name inserted");
-            }
             if (strcmp(sym->name, name) == 0) {
                 // move to front optimization
                 if (sym != current->head) {
@@ -101,11 +124,6 @@ Symbol* symtab_lookup(SymbolTable* st, const char* name) {
 Symbol* symtab_lookup_current(SymbolTable* st, const char* name) {
     Symbol* sym = st->head;
     while (sym) {
-        if (sym->name == NULL) {
-            fatal_error(-1, "SymbolTable", "Null sym->name inserted");
-        } else if (name == NULL) {
-            fatal_error(-1, "SymbolTable", "Null name inserted");
-        }
         if (strcmp(sym->name, name) == 0) {
             // move-to-front
             if (sym != st->head) {

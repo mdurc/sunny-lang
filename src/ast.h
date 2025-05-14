@@ -30,8 +30,8 @@ typedef struct SymbolTable SymbolTable;
 
 struct ASTNode {
     NodeType node_type;
-    TokenType token_type; // used for literals
-    int row, col, len;
+    int scope_depth;
+    Token* token;
 
     // changed by type checker after AST construction
     struct CheckedState {
@@ -109,26 +109,26 @@ struct ASTNode {
     };
 };
 
-ASTNode* create_func_call(const char* name, ASTNode** args, int arg_count, int row, int col, int len);
+ASTNode* create_func_call(const char* name, ASTNode** args, int arg_count, Token* token, int scope);
 ASTNode* create_func_decl(ASTNode* return_param, const char* name, ASTNode** params,
-        int param_count, ASTNode* body, SymbolTable* symtab, int row, int col, int len);
-ASTNode* create_block(ASTNode** statements, int count, SymbolTable* symtab, int row, int col, int len);
-ASTNode* create_bin_op(TokenType op, ASTNode* left, ASTNode* right, int row, int col, int len);
-ASTNode* create_unary_op(TokenType op, ASTNode* operand, int row, int col, int len);
-ASTNode* create_literal(Token* token, int row, int col, int len);
-ASTNode* create_identifier(const char* name, int row, int col, int len);
-ASTNode* create_type(bool mut, TokenType type, int row, int col, int len);
-ASTNode* create_param(ASTNode* type, const char* name, int row, int col, int len);
-ASTNode* create_return(ASTNode* expr, int row, int col, int len);
-ASTNode* create_print(ASTNode* expr, int row, int col, int len);
-ASTNode* create_if(ASTNode* cond, ASTNode* then_block, ASTNode* else_block, int row, int col, int len);
+        int param_count, ASTNode* body, SymbolTable* symtab, Token* token, int scope);
+ASTNode* create_block(ASTNode** statements, int count, SymbolTable* symtab, Token* token, int scope);
+ASTNode* create_bin_op(TokenType op, ASTNode* left, ASTNode* right, Token* token, int scope);
+ASTNode* create_unary_op(TokenType op, ASTNode* operand, Token* token, int scope);
+ASTNode* create_literal(Token* token, int scope);
+ASTNode* create_identifier(const char* name, Token* token, int scope);
+ASTNode* create_type(bool mut, TokenType type, Token* token, int scope);
+ASTNode* create_param(ASTNode* type, const char* name, Token* token, int scope);
+ASTNode* create_return(ASTNode* expr, Token* token, int scope);
+ASTNode* create_print(ASTNode* expr, Token* token, int scope);
+ASTNode* create_if(ASTNode* cond, ASTNode* then_block, ASTNode* else_block, Token* token, int scope);
 ASTNode* create_for(ASTNode* init, ASTNode* end, ASTNode* iter, ASTNode* body,
-        SymbolTable* symtab, int row, int col, int len);
-ASTNode* create_var_decl(ASTNode* type, const char* name, ASTNode* init, int row, int col, int len);
-ASTNode* create_assign(const char* name, ASTNode* value, int row, int col, int len);
-ASTNode* create_while(ASTNode* cond, ASTNode* body, int row, int col, int len);
-ASTNode* create_break(int row, int col, int len);
-ASTNode* create_continue(int row, int col, int len);
+        SymbolTable* symtab, Token* token, int scope);
+ASTNode* create_var_decl(ASTNode* type, const char* name, ASTNode* init, Token* token, int scope);
+ASTNode* create_assign(const char* name, ASTNode* value, Token* token, int scope);
+ASTNode* create_while(ASTNode* cond, ASTNode* body, Token* token, int scope);
+ASTNode* create_break(Token* token, int scope);
+ASTNode* create_continue(Token* token, int scope);
 
 void print_ast(ASTNode* node, int indent);
 void free_ast(ASTNode* node);

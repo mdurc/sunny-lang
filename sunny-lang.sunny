@@ -5,6 +5,13 @@ foo := 4;
 i16 bar;
 bar := 18;
 
+mut u8 a, b, c, d;
+
+{
+    a := 3;
+    b := 33;
+}
+
 mut i8 foo_ := 2;
 i16 bar_ := 17;
 
@@ -22,7 +29,6 @@ mut bool my_bool := true;
 my_bool := false;
 
 3 + 2 * (2 + 3 * 2);
-
 
 // functions
 func ADD (x: u8, y: u8) returns (z: i8)

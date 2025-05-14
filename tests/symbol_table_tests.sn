@@ -1,9 +1,12 @@
 // Duplicate declarations
 u8 x := 10;
-// u8 x := 20; // ERR
+u8 x := 20; // ERR
+
+func dupe() { }
+func dupe() { }
 
 // Shadowing
-mut u8 y := 5;
+u8 y := 5;
 {
     u8 y := 7; // OK
     print y;   // prints 7
@@ -11,7 +14,7 @@ mut u8 y := 5;
 print y;       // prints 5
 
 // Use of undeclared variable
-// foo := 123; // ERR
+foo := 123; // ERR
 
 // OK
 func SUM(a: u8, b: u8) returns (result: u8) {
@@ -19,13 +22,13 @@ func SUM(a: u8, b: u8) returns (result: u8) {
 }
 
 // Redeclaring parameter inside function
-// func BAD(param: u8) {
-//     u8 param := 5; // ERR
-// }
+func BAD(param: u8) {
+    u8 param := 5; // ERR
+}
 
-// func BAD_NAMES(a : u8, a : u8) {
-//     // err from duplicate parameter names
-// }
+func BAD_NAMES(a : u8, a : u8) {
+    // err from duplicate parameter names
+}
 
 // even though y is not defined in the function scope, it is defined in parent (global) scope above
 func Valid(x: u8) returns (out: u8) {
@@ -37,4 +40,4 @@ func Valid(x: u8) returns (out: u8) {
 for (mut u8 i := 0; i < 3; i := i + 1) {
     print i;
 }
-// print i; // ERR undefined
+print i; // ERR undefined

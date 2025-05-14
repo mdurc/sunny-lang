@@ -6,11 +6,10 @@ f64 pi := 3.14159;
 String hello := "world";
 u8 my_char := 'A';
 
-// Type mismatch tests (should all error)
-mut u8 a := 3.14;             // Float to u8
-bool b := 5;                 // Int to bool
-u8 c := "string";            // String to u8
-f64 d := true;               // Bool to float
+mut u8 a := 3.14;
+bool b := 5;
+u8 c := "string"; // invalid
+f64 d := true;
 
 // Control flow tests
 if (x < y and condition) {
@@ -21,9 +20,8 @@ if (x < y and condition) {
     }
 }
 
-!5; // invalid unary operand
+!5; // ok conversion
 
-// Loop tests
 mut u8 i;
 for (i := 0; i < 5; i := i + 1) {
     print i;
@@ -32,24 +30,20 @@ for (i := 0; i < 5; i := i + 1) {
     }
 }
 
-// Block scope test
 {
     u8 inner := 10;
     print inner;
 }
-inner := 5;                 // Error: out of scope
+inner := 5; // invalid out of scope
 
-// Function tests
 func ADD (a: u8, b: u8) returns (result: u8) {
     result := a + b;
-    return result;             // Explicit return
+    return result;
 }
 
-// Function call tests
 u8 sum := ADD(100, 200);
-ADD(true, false); // true and false will be casted to 1 and 0
+ADD(true, false);
 
-// Type conversion tests
 mut f64 float_val := 3.14;
 u8 int_val := float_val;
 
@@ -59,7 +53,6 @@ bool b3 := b1 and b2;
 bool b4 := b1 or b2;
 bool b5 := 1 and true;
 
-// Nested loops and breaks
 for (mut u8 j := 0; j < 10; j := j + 1) {
     while (true) {
         if (j = 5) {
@@ -69,7 +62,6 @@ for (mut u8 j := 0; j < 10; j := j + 1) {
 }
 break;
 
-// Shadowing test
 {
     u8 shadow := 10;
     {
@@ -77,14 +69,13 @@ break;
     }
 }
 
-// Void function test
 func LOG (message: String) {
     print message;
     return "something";     // Invalid return
 }
 
-Return type enforcement
 func BAD_RETURN () returns (value: u8) {
+    // no return here
 }
 
 // Modulo operations

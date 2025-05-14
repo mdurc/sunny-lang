@@ -5,22 +5,43 @@
 #include "lexer.h"
 #include "symbol_table.h"
 
+typedef enum {
+    DIAG_ERROR = 1,
+    DIAG_WARNING
+} DiagnosticSeverity;
+
 typedef struct {
+    int row, col, len;
+    char* message;
+    DiagnosticSeverity severity;
+} Diagnostic;
+
+typedef struct {
+    // extra tokens that may need to be added by parser
+    Token** p_tokens;
+    int p_size, p_capacity;
+
     Token** tokens;
     int pos;
     int size;
     SymbolTable* symtab;
 
     bool panic_mode;
-    int errors;
-    int warnings;
+    Diagnostic** diagnostics;
+    int diag_count;
+    int diag_capacity;
     int last_line;
+
+    int errors, warnings;
 } Parser;
 
+void parser_add_diagnostic(Parser* p, DiagnosticSeverity severity, int line, int col, int len, const char* format, ...);
+void free_parser(Parser* p);
 Parser* parser_init(Token** tokens, int count);
+
 ASTNode* parse_program(Parser* parser);
 ASTNode* parse_function(Parser* parser);
-ASTNode* parse_func_call(Parser* p, const char* name, int line, int col, int len);
+ASTNode* parse_func_call(Parser* p, const char* name, Token* tok);
 ASTNode* parse_if(Parser* p);
 ASTNode* parse_for(Parser* p);
 ASTNode* parse_statement(Parser* parser);

@@ -4,7 +4,8 @@
 - My goals for revision:
     - [x] Revise the syntax and make the language actually useable
     - [x] Write a context free grammar for the language
-    - Create a treesitter/syntax highlighting grammar
+    - [x] Create a treesitter/syntax highlighting grammar
+    - [x] LSP: Diagnostic, Goto-Definition, Hovering over identifiers and literals
     - Rewrite code generation to x86-64
     <!--- Write custom assembler for more familiar and basic instruction set of x86-64-->
     - Bootstrap compiler
