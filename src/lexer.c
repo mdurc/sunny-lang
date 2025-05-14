@@ -418,6 +418,7 @@ Token* get_char_token(FILE* fp, int row, int col) {
     Token* t = malloc(sizeof(Token));
     t->row = row;
     t->col = col;
+    t->len = 3; // 'a'
     t->type = CHAR_LITERAL;
     t->data.int_val = char_content;
     t->start = malloc(4);
